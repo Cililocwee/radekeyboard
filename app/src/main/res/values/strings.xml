@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">Rade Keyboard</string>
+
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+        <string name="alts_for_a">\@</string>
+        <string name="alts_for_b">:</string>
+        <string name="alts_for_c">\"</string>
+        <string name="alts_for_d">&amp;</string>
+        <string name="alts_for_e">3</string>
+        <string name="alts_for_f">*</string>
+        <string name="alts_for_g">-</string>
+        <string name="alts_for_h">+</string>
+        <string name="alts_for_i">8</string>
+        <string name="alts_for_j">=</string>
+        <string name="alts_for_k">(</string>
+        <string name="alts_for_l">)</string>
+        <string name="alts_for_m">/</string>
+        <string name="alts_for_n">;</string>
+        <string name="alts_for_o">9</string>
+        <string name="alts_for_p">0</string>
+        <string name="alts_for_q">1</string>
+        <string name="alts_for_r">4</string>
+        <string name="alts_for_s">#</string>
+        <string name="alts_for_t">5</string>
+        <string name="alts_for_u">7</string>
+        <string name="alts_for_v">\'</string>
+        <string name="alts_for_w">2</string>
+        <string name="alts_for_x">$</string>
+        <string name="alts_for_y">6</string>
+        <string name="alts_for_z">_</string>
+
+        <string name="alts_for_up_a">ĂÂẪ</string>
+        <string name="alts_for_up_b">Ƀ</string>
+        <string name="alts_for_up_c">Č</string>
+        <string name="alts_for_up_d">Đ</string>
+        <string name="alts_for_up_e">ÊĔỄ</string>
+        <string name="alts_for_up_i">Ĭ</string>
+        <string name="alts_for_up_n">Ñ</string>
+        <string name="alts_for_up_o">ÔŎỖƠỠ</string>
+        <string name="alts_for_up_u">ŬƯỮ</string>
+
+</resources>
