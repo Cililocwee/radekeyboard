@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'com.example.admin.ethnickeyboard' // required with AGP 8+
+    namespace 'com.corriestroup.radekeyboard' // required with AGP 8+
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.admin.ethnickeyboard"
-        minSdkVersion 17
+        applicationId "com.corriestroup.radekeyboard"
+        minSdkVersion 21
         targetSdk 34
         versionCode 1
         versionName "1.0"

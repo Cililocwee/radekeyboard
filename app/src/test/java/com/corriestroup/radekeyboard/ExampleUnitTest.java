@@ -1,4 +1,4 @@
-package com.example.admin.ethnickeyboard;
+package com.corriestroup.radekeyboard;
 
 import org.junit.Test;
 
