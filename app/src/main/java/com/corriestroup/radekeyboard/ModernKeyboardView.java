@@ -62,16 +62,16 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("d", new String[]{"đ"});
 
         // Numbers have symbols as alternatives (from your original layout)
-        RADE_ALTS.put("q", new String[]{"1"});
-        RADE_ALTS.put("w", new String[]{"2"});
-        RADE_ALTS.put("e", new String[]{"3", "ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
-        RADE_ALTS.put("r", new String[]{"4"});
-        RADE_ALTS.put("t", new String[]{"5"});
-        RADE_ALTS.put("y", new String[]{"6", "ý", "ỳ", "ỵ", "ỷ", "ỹ"});
-        RADE_ALTS.put("u", new String[]{"7", "ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
-        RADE_ALTS.put("i", new String[]{"8", "í", "ì", "ị", "ỉ", "ĩ"});
-        RADE_ALTS.put("o", new String[]{"9", "ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
-        RADE_ALTS.put("p", new String[]{"0"});
+        RADE_ALTS.put("q", new String[]{"%"});
+        RADE_ALTS.put("w", new String[]{"^"});
+        RADE_ALTS.put("e", new String[]{"~", "ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
+        RADE_ALTS.put("r", new String[]{"|"});
+        RADE_ALTS.put("t", new String[]{"["});
+        RADE_ALTS.put("y", new String[]{"]", "ý", "ỳ", "ỵ", "ỷ", "ỹ"});
+        RADE_ALTS.put("u", new String[]{"<", "ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
+        RADE_ALTS.put("i", new String[]{">", "í", "ì", "ị", "ỉ", "ĩ"});
+        RADE_ALTS.put("o", new String[]{"{", "ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
+        RADE_ALTS.put("p", new String[]{"}"});
 
         RADE_ALTS.put("a", new String[]{"@", "ă", "â", "á", "à", "ạ", "ả", "ã", "ắ", "ằ", "ặ", "ẳ", "ẵ", "ấ", "ầ", "ậ", "ẩ", "ẫ"});
         RADE_ALTS.put("s", new String[]{"#"});
@@ -82,6 +82,15 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("j", new String[]{"="});
         RADE_ALTS.put("k", new String[]{"("});
         RADE_ALTS.put("l", new String[]{")"});
+
+        RADE_ALTS.put("z", new String[]{"_"});
+        RADE_ALTS.put("x", new String[]{"$"});
+        RADE_ALTS.put("c", new String[]{"\""});
+        RADE_ALTS.put("v", new String[]{"'"});
+        RADE_ALTS.put("b", new String[]{":"});
+        RADE_ALTS.put("n", new String[]{";"});
+        RADE_ALTS.put("m", new String[]{"/"});
+
 
         // Long-press alternatives for bottom row
         RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
@@ -288,6 +297,7 @@ public class ModernKeyboardView extends View {
             keyPaint.setColor(keyColor);
             canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
         }
+
         // Draw key text or drawable
         if (shouldUseDrawable(key.label)) {
             drawKeyDrawable(canvas, key, textColor);
@@ -295,11 +305,32 @@ public class ModernKeyboardView extends View {
             textPaint.setColor(textColor);
             String displayText = getDisplayText(key.label);
             float centerX = key.x + key.width / 2;
-            float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 3;
-            canvas.drawText(displayText, centerX, centerY, textPaint);
+
+            // Draw main key text - positioned lower
+            float mainTextY = key.y + key.height / 2 + textPaint.getTextSize() / 2 + 8;
+            canvas.drawText(displayText, centerX, mainTextY, textPaint);
+
+            // Draw alternative character preview (smaller, less opaque)
+            String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
+            if (alternatives != null && alternatives.length > 0) {
+                // Save original text size and color
+                float originalSize = textPaint.getTextSize();
+                int originalColor = textPaint.getColor();
+
+                // Set smaller size and semi-transparent color
+                textPaint.setTextSize(originalSize * 0.6f);
+                textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
+
+                // Draw first alternative above main text - positioned relative to key center
+                float altY = key.y + key.height / 2 - originalSize * 0.6f;
+                canvas.drawText(alternatives[0], centerX, altY, textPaint);
+
+                // Restore original paint settings
+                textPaint.setTextSize(originalSize);
+                textPaint.setColor(originalColor);
+            }
         }
     }
-
     private boolean shouldUseDrawable(String label) {
         return label.equals("SHIFT") || label.equals("DELETE") || label.equals("ENTER");
     }
