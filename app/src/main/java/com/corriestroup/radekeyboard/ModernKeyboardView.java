@@ -332,7 +332,12 @@ public class ModernKeyboardView extends View {
         switch (label) {
             case "SPACE": return "space";
             case "SYM": return isSymbolMode ? "ABC" : "123";
-            default: return label;
+            default:
+                // Apply uppercase for letters when shift or caps lock is on
+                if ((isShiftPressed || isCapsLock) && label.length() == 1 && Character.isLetter(label.charAt(0))) {
+                    return label.toUpperCase();
+                }
+                return label;
         }
     }
 
