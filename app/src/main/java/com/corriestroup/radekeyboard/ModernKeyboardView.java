@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.RectF;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -53,15 +54,6 @@ public class ModernKeyboardView extends View {
     // Vietnamese/Rade diacritics map for long-press
     private static final Map<String, String[]> RADE_ALTS = new HashMap<>();
     static {
-        // Vowels with only their base variations (no tones)
-        RADE_ALTS.put("a", new String[]{"ă", "â"});
-        RADE_ALTS.put("e", new String[]{"ê"});
-        RADE_ALTS.put("i", new String[]{});  // No variations for i
-        RADE_ALTS.put("o", new String[]{"ô", "ơ"});
-        RADE_ALTS.put("u", new String[]{"ư"});
-        RADE_ALTS.put("y", new String[]{});  // No variations for y
-        RADE_ALTS.put("d", new String[]{"đ"});
-
         // Tone marks on g, h, j, k, l
         RADE_ALTS.put("g", new String[]{"̀","-"}); // Down tone (grave accent)
         RADE_ALTS.put("h", new String[]{"̉","+"}); // Hoi tone (hook above)
@@ -72,6 +64,7 @@ public class ModernKeyboardView extends View {
         // Other symbol alternatives (keeping your existing ones)
         RADE_ALTS.put("q", new String[]{"%"});
         RADE_ALTS.put("w", new String[]{"^"});
+        RADE_ALTS.put("e", new String[]{"~","ê"});
         RADE_ALTS.put("r", new String[]{"|"});
         RADE_ALTS.put("t", new String[]{"["});
         RADE_ALTS.put("y", new String[]{"]"});
@@ -158,11 +151,16 @@ public class ModernKeyboardView extends View {
     private Runnable longPressRunnable;
     private PopupWindow longPressPopup;
     private boolean isLongPressing = false;
-    private static final int LONG_PRESS_DELAY = 500; // 500ms
+    private static final int LONG_PRESS_DELAY = 200; // Reduced from 500ms to 200ms
+    private List<android.widget.Button> altButtons = new ArrayList<>();
+    private int selectedAltIndex = -1; // Track which alternative is currently selected
 
     // Animation
     private ValueAnimator pressAnimator;
     private float pressScale = 1.0f;
+
+    // Vibratino
+    private boolean vibrationEnabled = false;
 
     // Dimensions
     private float keyHeight;
@@ -459,11 +457,6 @@ public class ModernKeyboardView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        // If popup is showing, let it handle touch events
-        if (longPressPopup != null && longPressPopup.isShowing()) {
-            return true; // Don't dismiss popup on touch
-        }
-
         float x = event.getX();
         float y = event.getY();
 
@@ -474,45 +467,158 @@ public class ModernKeyboardView extends View {
                     pressedKey = touchedKey;
                     animateKeyPress(true);
                     invalidate();
-
-                    // Start long press timer
                     startLongPressTimer(touchedKey);
                 }
                 return true;
 
-            case MotionEvent.ACTION_UP:
-                // Cancel long press
-                cancelLongPressTimer();
-
-                if (pressedKey != null && !isLongPressing) {
-                    handleKeyPress(pressedKey);
-                }
-                if (pressedKey != null) {
-                    animateKeyPress(false);
-                    pressedKey = null;
-                    isLongPressing = false;
-                    invalidate();
-                }
-                return true;
-
-            case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_MOVE:
-                // Only cancel if moved far from original key
-                Key currentKey = findKeyAt(x, y);
-                if (currentKey != pressedKey && !isLongPressing) {
-                    cancelLongPressTimer();
-                    if (pressedKey != null) {
+                if (isLongPressing) {
+                    handleAlternativeSelection(x, y);
+                    return true;
+                } else if (pressedKey != null) {
+                    Key currentKey = findKeyAt(x, y);
+                    if (currentKey != pressedKey) {
+                        cancelLongPressTimer();
                         animateKeyPress(false);
                         pressedKey = null;
                         invalidate();
                     }
                 }
                 return true;
+
+            case MotionEvent.ACTION_UP:
+                cancelLongPressTimer(); // Add this line
+
+                if (isLongPressing) {
+                    handleAlternativeCommit();
+                } else if (pressedKey != null) {
+                    handleKeyPress(pressedKey);
+                }
+
+                // Reset all state
+                if (pressedKey != null) {
+                    animateKeyPress(false);
+                    pressedKey = null;
+                }
+                isLongPressing = false;
+                selectedAltIndex = -1;
+                hideLongPressPopup();
+                invalidate();
+                return true;
+
+            case MotionEvent.ACTION_CANCEL:
+                cancelLongPressTimer();
+                if (pressedKey != null) {
+                    animateKeyPress(false);
+                    pressedKey = null;
+                }
+                isLongPressing = false;
+                selectedAltIndex = -1;
+                hideLongPressPopup();
+                invalidate();
+                return true;
         }
 
-        return super.onTouchEvent(event);
+        return true;
     }
 
+    private void handleAlternativeSelection(float x, float y) {
+        if (altButtons.isEmpty() || longPressPopup == null || !longPressPopup.isShowing()) {
+            return;
+        }
+
+        // Convert touch coordinates to screen coordinates
+        int[] keyboardLocation = new int[2];
+        this.getLocationOnScreen(keyboardLocation);
+        float screenX = x + keyboardLocation[0];
+        float screenY = y + keyboardLocation[1];
+
+        int newSelectedIndex = -1;
+
+        // Check each button to see if touch is inside its bounds
+        for (int i = 0; i < altButtons.size(); i++) {
+            View button = altButtons.get(i);
+            int[] buttonLocation = new int[2];
+            button.getLocationOnScreen(buttonLocation);
+
+            // Button bounds in screen coordinates
+            int left = buttonLocation[0];
+            int top = buttonLocation[1];
+            int right = left + button.getWidth();
+            int bottom = top + button.getHeight();
+
+            if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) {
+                newSelectedIndex = i;
+                break;
+            }
+        }
+
+        // Update selection only if it changed
+        if (newSelectedIndex != selectedAltIndex) {
+            // Reset previously selected button
+            if (selectedAltIndex != -1 && selectedAltIndex < altButtons.size()) {
+                resetButtonBackground(selectedAltIndex);
+            }
+
+            // Highlight newly selected button
+            if (newSelectedIndex != -1) {
+                highlightButton(newSelectedIndex);
+            }
+
+            selectedAltIndex = newSelectedIndex;
+        }
+    }
+    private void resetButtonBackground(int index) {
+        if (index >= 0 && index < altButtons.size()) {
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setColor(surfaceVariantColor);
+            bg.setCornerRadius(8);
+            altButtons.get(index).setBackground(bg);
+            altButtons.get(index).setTextColor(onSurfaceColor);
+        }
+    }
+
+    private void highlightButton(int index) {
+        if (index >= 0 && index < altButtons.size()) {
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setColor(primaryColor);
+            bg.setCornerRadius(8);
+            altButtons.get(index).setBackground(bg);
+            altButtons.get(index).setTextColor(onPrimaryColor);
+        }
+    }
+
+    private void handleAlternativeCommit() {
+        if (keyPressListener == null || longPressedKey == null) return;
+
+        if (selectedAltIndex >= 0 && selectedAltIndex < altButtons.size()) {
+            // User selected an alternative
+            String selectedText = altButtons.get(selectedAltIndex).getText().toString();
+            keyPressListener.onKeyPressed(selectedText, selectedText.charAt(0));
+        } else {
+            // No alternative selected - use the first alternative character
+            String[] alternatives = RADE_ALTS.get(longPressedKey.label.toLowerCase());
+            if (alternatives != null && alternatives.length > 0) {
+                String firstAlt = alternatives[0];
+
+                // Apply case logic if it's a letter
+                String outputText = firstAlt;
+                if ((isShiftPressed || isCapsLock) && firstAlt.length() == 1 && Character.isLetter(firstAlt.charAt(0))) {
+                    outputText = firstAlt.toUpperCase();
+                }
+
+                keyPressListener.onKeyPressed(outputText, outputText.charAt(0));
+            } else {
+                // Fallback to original if no alternatives exist (shouldn't happen in long press context)
+                String originalLabel = longPressedKey.label;
+                String outputText = originalLabel;
+                if ((isShiftPressed || isCapsLock) && originalLabel.length() == 1 && Character.isLetter(originalLabel.charAt(0))) {
+                    outputText = originalLabel.toUpperCase();
+                }
+                keyPressListener.onKeyPressed(outputText, outputText.charAt(0));
+            }
+        }
+    }
     private void startLongPressTimer(Key key) {
         // Only start timer for keys with alternatives
         if (!RADE_ALTS.containsKey(key.label.toLowerCase())) {
@@ -546,24 +652,30 @@ public class ModernKeyboardView extends View {
         showAlternativesPopup(key, alternatives);
 
         // Add vibration feedback for long press
-        try {
-            android.os.Vibrator vibrator = (android.os.Vibrator) getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
-            if (vibrator != null && vibrator.hasVibrator()) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
-                } else {
-                    vibrator.vibrate(100);
+        if (vibrationEnabled){
+            try {
+                android.os.Vibrator vibrator = (android.os.Vibrator) getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                if (vibrator != null && vibrator.hasVibrator()) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                    } else {
+                        vibrator.vibrate(100);
+                    }
                 }
+            } catch (Exception e) {
+                // Silent fail
             }
-        } catch (Exception e) {
-            // Silent fail
         }
+
     }
 
     private void showAlternativesPopup(Key key, String[] alternatives) {
         if (longPressPopup != null && longPressPopup.isShowing()) {
             longPressPopup.dismiss();
         }
+
+        altButtons.clear();
+        selectedAltIndex = -1;
 
         // Create popup layout
         android.widget.LinearLayout popupLayout = new android.widget.LinearLayout(getContext());
@@ -583,16 +695,17 @@ public class ModernKeyboardView extends View {
             popupLayout.setElevation(16);
         }
 
+        // Calculate standard key width
+        float standardKeyWidth = key.width;
+
         // Create buttons for each alternative
         for (int i = 0; i < alternatives.length; i++) {
             final String alt = alternatives[i];
 
             // Apply uppercase if shift is pressed and it's a letter
             String displayText = alt;
-            String commitText = alt;
             if ((isShiftPressed || isCapsLock) && alt.length() == 1 && Character.isLetter(alt.charAt(0))) {
                 displayText = alt.toUpperCase();
-                commitText = alt.toUpperCase();
             }
 
             android.widget.Button altButton = new android.widget.Button(getContext());
@@ -606,13 +719,13 @@ public class ModernKeyboardView extends View {
             buttonBg.setCornerRadius(8);
             altButton.setBackground(buttonBg);
 
-            altButton.setPadding(20, 12, 20, 12);
+            altButton.setPadding(12, 12, 12, 12);
             altButton.setMinWidth(0);
             altButton.setMinimumWidth(0);
 
-            // Set margins between buttons
+            // Set fixed width based on standard key width
             android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    (int)standardKeyWidth,
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
             );
             if (i > 0) {
@@ -620,59 +733,40 @@ public class ModernKeyboardView extends View {
             }
             altButton.setLayoutParams(params);
 
-            // Capture the final commitText for the onClick listener
-            final String finalCommitText = commitText;
-            altButton.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (keyPressListener != null) {
-                        keyPressListener.onKeyPressed(finalCommitText, finalCommitText.charAt(0));
-                    }
-                    hideLongPressPopup();
-                    // Reset state
-                    pressedKey = null;
-                    isLongPressing = false;
-                    invalidate();
-                }
-            });
+            // Make buttons non-interactive since we handle touch manually
+            altButton.setClickable(false);
+            altButton.setFocusable(false);
 
+            altButtons.add(altButton);
             popupLayout.addView(altButton);
         }
 
-        // Create popup with proper flags
+        // Create popup - SIMPLIFIED FLAGS
         longPressPopup = new PopupWindow(popupLayout,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                false); // Don't make it focusable to prevent dismissing on outside touch
+                false);
 
+        // Simple popup settings
+        longPressPopup.setTouchable(false);
         longPressPopup.setOutsideTouchable(false);
-        longPressPopup.setTouchable(true);
+        longPressPopup.setFocusable(false);
 
-        // Calculate proper popup position (centered above the key)
+        // Calculate popup position
         popupLayout.measure(android.view.View.MeasureSpec.UNSPECIFIED, android.view.View.MeasureSpec.UNSPECIFIED);
         int popupWidth = popupLayout.getMeasuredWidth();
         int popupHeight = popupLayout.getMeasuredHeight();
 
-        // Position above the key, centered horizontally
         int popupX = (int)(key.x + key.width / 2 - popupWidth / 2);
-        int popupY = (int)(key.y - popupHeight - 20); // 20px above the key
+        int popupY = (int)(key.y - popupHeight - 20);
 
-        // Ensure popup stays within screen bounds
+        // Keep popup on screen
         if (popupX < 10) popupX = 10;
         if (popupX + popupWidth > getWidth() - 10) popupX = getWidth() - popupWidth - 10;
-        if (popupY < 10) popupY = (int)(key.y + key.height + 20); // Show below if no room above
+        if (popupY < 10) popupY = (int)(key.y + key.height + 20);
 
         longPressPopup.showAtLocation(this, android.view.Gravity.NO_GRAVITY, popupX, popupY);
-
-        // Add a delayed auto-dismiss as backup
-        postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                hideLongPressPopup();
-            }
-        }, 5000); // 5 seconds timeout
     }
-
     private void hideLongPressPopup() {
         if (longPressPopup != null && longPressPopup.isShowing()) {
             longPressPopup.dismiss();
