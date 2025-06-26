@@ -91,7 +91,7 @@ public class ModernKeyboardView extends View {
 
         // Long-press alternatives for bottom row
         RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
-        RADE_ALTS.put(".", new String[]{",","!", "?", ";", ":"});
+        RADE_ALTS.put(".", new String[]{",","!","?"});
 
 
     }

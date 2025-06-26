@@ -24,6 +24,7 @@ public class ModernInputMethodService extends InputMethodService {
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
+
     @Override
     public View onCreateInputView() {
         keyboardView = new ModernKeyboardView(this);
@@ -38,6 +39,9 @@ public class ModernInputMethodService extends InputMethodService {
                 handleSpecialKey(specialKey);
             }
         });
+
+        // Check auto-capitalization when keyboard is created
+        updateAutoCapitalization();
 
         return keyboardView;
     }
@@ -89,6 +93,13 @@ public class ModernInputMethodService extends InputMethodService {
         }
 
         ic.commitText(textToCommit, 1);
+
+        // Automatically add a space after punctuation
+        if (key.equals(".") || key.equals("?") || key.equals("!")) {
+            ic.commitText(" ", 1);
+        }
+        // Check if we should auto-capitalize after this text
+        updateAutoCapitalization();
     }
 
     private void deleteLastWord() {
@@ -119,6 +130,36 @@ public class ModernInputMethodService extends InputMethodService {
         // Delete the characters
         if (charsToDelete > 0) {
             ic.deleteSurroundingText(charsToDelete, 0);
+        }
+    }
+
+    private void updateAutoCapitalization() {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+
+        // Get text before cursor
+        CharSequence beforeCursor = ic.getTextBeforeCursor(10, 0);
+
+        boolean shouldCapitalize = false;
+
+        if (beforeCursor == null || beforeCursor.length() == 0) {
+            // Empty field - capitalize
+            shouldCapitalize = true;
+        } else {
+            String text = beforeCursor.toString();
+            // Check if ends with sentence endings followed by space
+            if (text.endsWith(". ") || text.endsWith("? ") || text.endsWith("! ")) {
+                shouldCapitalize = true;
+            }
+        }
+
+        if (shouldCapitalize) {
+            // Only set shift if we're not already in caps lock and not already shifted
+            if (!isCapsLockOn && !isShiftPressed) {
+                isShiftPressed = true;  // Set shift, not caps lock
+                isCapsLockOn = false;   // Make sure caps lock is off
+                keyboardView.updateShiftState(isShiftPressed, isCapsLockOn);
+            }
         }
     }
     private boolean isToneMark(String key) {
@@ -194,6 +235,14 @@ public class ModernInputMethodService extends InputMethodService {
             case ModernKeyboardView.KEY_NUMBERS:
                 keyboardView.toggleSymbolMode();
                 break;
+        }
+
+        // Check auto-capitalization after certain special keys
+        if (specialKey == ModernKeyboardView.KEY_SPACE ||
+                specialKey == ModernKeyboardView.KEY_ENTER ||
+                specialKey == ModernKeyboardView.KEY_DELETE ||
+                specialKey == ModernKeyboardView.KEY_DELETE_WORD) {
+            updateAutoCapitalization();
         }
     }
 }
