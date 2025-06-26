@@ -35,7 +35,7 @@ public class ModernKeyboardView extends View {
     public static final int KEY_NUMBERS = -6;
 
     // Keyboard layouts
-    private static final String[][] QWERTY_LAYOUT = {
+    private static final String[][] QWERTY_LAYOUT = {{"1","2","3","4","5","6","7","8","9","0"},
             {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
             {"a", "s", "d", "f", "g", "h", "j", "k", "l"},
             {"SHIFT", "z", "x", "c", "v", "b", "n", "m", "DELETE"},
@@ -98,6 +98,10 @@ public class ModernKeyboardView extends View {
     private boolean isSymbolMode = false;
     private boolean isShiftPressed = false;
     private boolean isCapsLock = false;
+
+    private boolean isNumberKey(String label) {
+        return label.matches("[0-9]"); // Returns true for digits 0-9
+    }
 
     // Long press functionality
     private Key longPressedKey;
@@ -163,7 +167,7 @@ public class ModernKeyboardView extends View {
         float density = getResources().getDisplayMetrics().density;
         keyHeight = 48 * density; // 48dp
         keyMargin = 4 * density;  // 4dp
-        keyboardHeight = (int) (keyHeight * 4.5f + keyMargin * 5);
+        keyboardHeight = (int) (keyHeight * 5.5f + keyMargin * 6);
 
         textPaint.setTextSize(16 * density); // 16sp
     }
@@ -280,9 +284,10 @@ public class ModernKeyboardView extends View {
         );
 
         // Draw key background with rounded corners
-        keyPaint.setColor(keyColor);
-        canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
-
+        if (!isNumberKey(key.label)) {
+            keyPaint.setColor(keyColor);
+            canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
+        }
         // Draw key text or drawable
         if (shouldUseDrawable(key.label)) {
             drawKeyDrawable(canvas, key, textColor);
