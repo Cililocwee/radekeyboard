@@ -123,9 +123,7 @@ public class ModernInputMethodService extends InputMethodService {
                 break;
 
             case ModernKeyboardView.KEY_NUMBERS:
-                // TODO: Implement number layout toggle
-                // For now, just show a toast
-                android.widget.Toast.makeText(this, "Numbers mode - coming soon!", android.widget.Toast.LENGTH_SHORT).show();
+                keyboardView.toggleSymbolMode();
                 break;
         }
     }

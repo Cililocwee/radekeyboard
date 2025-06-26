@@ -44,9 +44,10 @@ public class ModernKeyboardView extends View {
 
     private static final String[][] SYMBOL_LAYOUT = {
             {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"},
-            {"@", "#", "$", "%", "&", "*", "(", ")", "-", "+"},
-            {"SYM", "!", "?", ":", ";", "'", "\"", ",", ".", "/"},
-            {"SYM", "SPACE", "ENTER"}
+            {"[","]","{","}","<",">","^","÷"},
+            {"@", "#", "$", "&", "_", "-", "(", ")", "=", "%"},
+            {"~", "\"", "*", "'", ":", "/", "!", "?", "+", "DELETE"},
+            {"ABC", ",", "SPACE", ".", "ENTER"}
     };
 
     // Vietnamese/Rade diacritics map for long-press
@@ -306,28 +307,34 @@ public class ModernKeyboardView extends View {
             String displayText = getDisplayText(key.label);
             float centerX = key.x + key.width / 2;
 
-            // Draw main key text - positioned lower
-            float mainTextY = key.y + key.height / 2 + textPaint.getTextSize() / 2 + 8;
-            canvas.drawText(displayText, centerX, mainTextY, textPaint);
+            if (isSymbolMode) {
+                // In symbol mode, center the text perfectly
+                float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 2;
+                canvas.drawText(displayText, centerX, centerY, textPaint);
+            } else {
+                // In QWERTY mode, position main text lower to make room for alternatives
+                float mainTextY = key.y + key.height / 2 + textPaint.getTextSize() / 2 + 8;
+                canvas.drawText(displayText, centerX, mainTextY, textPaint);
 
-            // Draw alternative character preview (smaller, less opaque)
-            String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
-            if (alternatives != null && alternatives.length > 0) {
-                // Save original text size and color
-                float originalSize = textPaint.getTextSize();
-                int originalColor = textPaint.getColor();
+                // Draw alternative character preview (smaller, less opaque)
+                String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
+                if (alternatives != null && alternatives.length > 0) {
+                    // Save original text size and color
+                    float originalSize = textPaint.getTextSize();
+                    int originalColor = textPaint.getColor();
 
-                // Set smaller size and semi-transparent color
-                textPaint.setTextSize(originalSize * 0.6f);
-                textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
+                    // Set smaller size and semi-transparent color
+                    textPaint.setTextSize(originalSize * 0.6f);
+                    textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
 
-                // Draw first alternative above main text - positioned relative to key center
-                float altY = key.y + key.height / 2 - originalSize * 0.6f;
-                canvas.drawText(alternatives[0], centerX, altY, textPaint);
+                    // Draw first alternative above main text - positioned relative to key center
+                    float altY = key.y + key.height / 2 - originalSize * 0.6f;
+                    canvas.drawText(alternatives[0], centerX, altY, textPaint);
 
-                // Restore original paint settings
-                textPaint.setTextSize(originalSize);
-                textPaint.setColor(originalColor);
+                    // Restore original paint settings
+                    textPaint.setTextSize(originalSize);
+                    textPaint.setColor(originalColor);
+                }
             }
         }
     }
@@ -363,6 +370,7 @@ public class ModernKeyboardView extends View {
         switch (label) {
             case "SPACE": return "space";
             case "SYM": return isSymbolMode ? "ABC" : "123";
+            case "ABC": return "ABC";  // Add this line
             default:
                 // Apply uppercase for letters when shift or caps lock is on
                 if ((isShiftPressed || isCapsLock) && label.length() == 1 && Character.isLetter(label.charAt(0))) {
@@ -642,6 +650,9 @@ public class ModernKeyboardView extends View {
             case ".":
                 // Regular period
                 keyPressListener.onKeyPressed(".", '.');
+                break;
+            case "ABC":
+                keyPressListener.onSpecialKeyPressed(KEY_SYMBOL);
                 break;
             default:
                 // Check if this key has Rade alternatives
