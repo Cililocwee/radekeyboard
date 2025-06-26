@@ -57,9 +57,15 @@ public class ModernInputMethodService extends InputMethodService {
 
         // Handle special Rade characters and combining breve
         String textToCommit = key;
-        if (keyCode == 774) {
-            // Combining breve - add it after the last character
-            textToCommit = "̆"; // Unicode combining breve U+0306
+        if (key.equals("˘")) {
+            // Combining breve - add it to the preceding character
+            CharSequence beforeCursor = ic.getTextBeforeCursor(1, 0);
+            if (beforeCursor != null && beforeCursor.length() > 0) {
+                ic.deleteSurroundingText(1, 0);
+                textToCommit = beforeCursor + "̆"; // Unicode combining breve U+0306
+            } else {
+                textToCommit = "̆"; // Just the combining breve if no preceding character
+            }
         }
 
         // Apply shift/caps
@@ -114,6 +120,12 @@ public class ModernInputMethodService extends InputMethodService {
 
             case ModernKeyboardView.KEY_SYMBOL:
                 keyboardView.toggleSymbolMode();
+                break;
+
+            case ModernKeyboardView.KEY_NUMBERS:
+                // TODO: Implement number layout toggle
+                // For now, just show a toast
+                android.widget.Toast.makeText(this, "Numbers mode - coming soon!", android.widget.Toast.LENGTH_SHORT).show();
                 break;
         }
     }

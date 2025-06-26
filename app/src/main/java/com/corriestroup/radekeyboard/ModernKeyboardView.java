@@ -6,8 +6,10 @@ import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -30,13 +32,14 @@ public class ModernKeyboardView extends View {
     public static final int KEY_ENTER = -3;
     public static final int KEY_SPACE = -4;
     public static final int KEY_SYMBOL = -5;
+    public static final int KEY_NUMBERS = -6;
 
     // Keyboard layouts
     private static final String[][] QWERTY_LAYOUT = {
             {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
             {"a", "s", "d", "f", "g", "h", "j", "k", "l"},
             {"SHIFT", "z", "x", "c", "v", "b", "n", "m", "DELETE"},
-            {"˘", "SYM", "SPACE", "ENTER"}
+            {"123", ",", "SPACE", ".", "ENTER"}
     };
 
     private static final String[][] SYMBOL_LAYOUT = {
@@ -80,16 +83,12 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("k", new String[]{"("});
         RADE_ALTS.put("l", new String[]{")"});
 
-        RADE_ALTS.put("z", new String[]{"_"});
-        RADE_ALTS.put("x", new String[]{"$"});
-        RADE_ALTS.put("c", new String[]{"\""});
-        RADE_ALTS.put("v", new String[]{"'"});
-        RADE_ALTS.put("b", new String[]{":"});
-        RADE_ALTS.put("n", new String[]{";", "ñ"});
-        RADE_ALTS.put("m", new String[]{"/"});
+        // Long-press alternatives for bottom row
+        RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
+        RADE_ALTS.put(".", new String[]{"?", "!", ",", ";", ":"});
 
-        // Special breve character
-        RADE_ALTS.put("˘", new String[]{"˘"});
+        // Symbol mode (123) alternatives
+        RADE_ALTS.put("123", new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"});
     }
 
     private List<Key> keys = new ArrayList<>();
@@ -284,21 +283,48 @@ public class ModernKeyboardView extends View {
         keyPaint.setColor(keyColor);
         canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
 
-        // Draw key text
-        textPaint.setColor(textColor);
-        String displayText = getDisplayText(key.label);
+        // Draw key text or drawable
+        if (shouldUseDrawable(key.label)) {
+            drawKeyDrawable(canvas, key, textColor);
+        } else {
+            textPaint.setColor(textColor);
+            String displayText = getDisplayText(key.label);
+            float centerX = key.x + key.width / 2;
+            float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 3;
+            canvas.drawText(displayText, centerX, centerY, textPaint);
+        }
+    }
 
-        float centerX = key.x + key.width / 2;
-        float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 3;
+    private boolean shouldUseDrawable(String label) {
+        return label.equals("SHIFT") || label.equals("DELETE") || label.equals("ENTER");
+    }
 
-        canvas.drawText(displayText, centerX, centerY, textPaint);
+    private void drawKeyDrawable(Canvas canvas, Key key, int tintColor) {
+        int drawableRes = getDrawableForKey(key.label);
+        if (drawableRes != 0) {
+            Drawable drawable = getContext().getResources().getDrawable(drawableRes);
+            drawable.setColorFilter(tintColor, PorterDuff.Mode.SRC_IN);
+
+            int size = (int)(Math.min(key.width, key.height) * 0.4f);
+            int left = (int)(key.x + (key.width - size) / 2);
+            int top = (int)(key.y + (key.height - size) / 2);
+
+            drawable.setBounds(left, top, left + size, top + size);
+            drawable.draw(canvas);
+        }
+    }
+
+    private int getDrawableForKey(String label) {
+        switch (label) {
+            case "SHIFT": return R.drawable.ic_shift;
+            case "DELETE": return R.drawable.ic_delete;
+            case "ENTER": return R.drawable.ic_enter;
+            default: return 0;
+        }
     }
 
     private String getDisplayText(String label) {
         switch (label) {
-            case "SHIFT": return "⇧";
-            case "DELETE": return "⌫";
-            case "ENTER": return "↵";
             case "SPACE": return "space";
             case "SYM": return isSymbolMode ? "ABC" : "123";
             default: return label;
@@ -565,9 +591,16 @@ public class ModernKeyboardView extends View {
             case "SYM":
                 keyPressListener.onSpecialKeyPressed(KEY_SYMBOL);
                 break;
-            case "˘":
-                // Special Rade breve character
-                keyPressListener.onKeyPressed("˘", 774); // Unicode combining breve
+            case "123":
+                keyPressListener.onSpecialKeyPressed(KEY_NUMBERS);
+                break;
+            case ",":
+                // Regular comma
+                keyPressListener.onKeyPressed(",", ',');
+                break;
+            case ".":
+                // Regular period
+                keyPressListener.onKeyPressed(".", '.');
                 break;
             default:
                 // Check if this key has Rade alternatives
