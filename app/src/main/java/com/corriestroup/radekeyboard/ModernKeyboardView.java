@@ -14,6 +14,8 @@ import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.PopupWindow;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +36,7 @@ public class ModernKeyboardView extends View {
             {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
             {"a", "s", "d", "f", "g", "h", "j", "k", "l"},
             {"SHIFT", "z", "x", "c", "v", "b", "n", "m", "DELETE"},
-            {"SYM", "SPACE", "ENTER"}
+            {"˘", "SYM", "SPACE", "ENTER"}
     };
 
     private static final String[][] SYMBOL_LAYOUT = {
@@ -44,16 +46,50 @@ public class ModernKeyboardView extends View {
             {"SYM", "SPACE", "ENTER"}
     };
 
-    // Vietnamese diacritics map
-    private static final Map<String, String[]> VIETNAMESE_ALTS = new HashMap<>();
+    // Vietnamese/Rade diacritics map for long-press
+    private static final Map<String, String[]> RADE_ALTS = new HashMap<>();
     static {
-        VIETNAMESE_ALTS.put("a", new String[]{"ă", "â", "á", "à", "ạ", "ả", "ã"});
-        VIETNAMESE_ALTS.put("e", new String[]{"ê", "é", "è", "ẹ", "ẻ", "ẽ"});
-        VIETNAMESE_ALTS.put("i", new String[]{"í", "ì", "ị", "ỉ", "ĩ"});
-        VIETNAMESE_ALTS.put("o", new String[]{"ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ"});
-        VIETNAMESE_ALTS.put("u", new String[]{"ư", "ú", "ù", "ụ", "ủ", "ũ"});
-        VIETNAMESE_ALTS.put("d", new String[]{"đ"});
-        VIETNAMESE_ALTS.put("y", new String[]{"ý", "ỳ", "ỵ", "ỷ", "ỹ"});
+        // Rade/Vietnamese characters with diacritics
+        RADE_ALTS.put("a", new String[]{"ă", "â", "á", "à", "ạ", "ả", "ã", "ắ", "ằ", "ặ", "ẳ", "ẵ", "ấ", "ầ", "ậ", "ẩ", "ẫ"});
+        RADE_ALTS.put("e", new String[]{"ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
+        RADE_ALTS.put("i", new String[]{"í", "ì", "ị", "ỉ", "ĩ"});
+        RADE_ALTS.put("o", new String[]{"ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
+        RADE_ALTS.put("u", new String[]{"ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
+        RADE_ALTS.put("y", new String[]{"ý", "ỳ", "ỵ", "ỷ", "ỹ"});
+        RADE_ALTS.put("d", new String[]{"đ"});
+
+        // Numbers have symbols as alternatives (from your original layout)
+        RADE_ALTS.put("q", new String[]{"1"});
+        RADE_ALTS.put("w", new String[]{"2"});
+        RADE_ALTS.put("e", new String[]{"3", "ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
+        RADE_ALTS.put("r", new String[]{"4"});
+        RADE_ALTS.put("t", new String[]{"5"});
+        RADE_ALTS.put("y", new String[]{"6", "ý", "ỳ", "ỵ", "ỷ", "ỹ"});
+        RADE_ALTS.put("u", new String[]{"7", "ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
+        RADE_ALTS.put("i", new String[]{"8", "í", "ì", "ị", "ỉ", "ĩ"});
+        RADE_ALTS.put("o", new String[]{"9", "ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
+        RADE_ALTS.put("p", new String[]{"0"});
+
+        RADE_ALTS.put("a", new String[]{"@", "ă", "â", "á", "à", "ạ", "ả", "ã", "ắ", "ằ", "ặ", "ẳ", "ẵ", "ấ", "ầ", "ậ", "ẩ", "ẫ"});
+        RADE_ALTS.put("s", new String[]{"#"});
+        RADE_ALTS.put("d", new String[]{"&", "đ"});
+        RADE_ALTS.put("f", new String[]{"*"});
+        RADE_ALTS.put("g", new String[]{"-"});
+        RADE_ALTS.put("h", new String[]{"+"});
+        RADE_ALTS.put("j", new String[]{"="});
+        RADE_ALTS.put("k", new String[]{"("});
+        RADE_ALTS.put("l", new String[]{")"});
+
+        RADE_ALTS.put("z", new String[]{"_"});
+        RADE_ALTS.put("x", new String[]{"$"});
+        RADE_ALTS.put("c", new String[]{"\""});
+        RADE_ALTS.put("v", new String[]{"'"});
+        RADE_ALTS.put("b", new String[]{":"});
+        RADE_ALTS.put("n", new String[]{";", "ñ"});
+        RADE_ALTS.put("m", new String[]{"/"});
+
+        // Special breve character
+        RADE_ALTS.put("˘", new String[]{"˘"});
     }
 
     private List<Key> keys = new ArrayList<>();
@@ -63,6 +99,14 @@ public class ModernKeyboardView extends View {
     private boolean isSymbolMode = false;
     private boolean isShiftPressed = false;
     private boolean isCapsLock = false;
+
+    // Long press functionality
+    private Key longPressedKey;
+    private Handler longPressHandler = new Handler();
+    private Runnable longPressRunnable;
+    private PopupWindow longPressPopup;
+    private boolean isLongPressing = false;
+    private static final int LONG_PRESS_DELAY = 500; // 500ms
 
     // Animation
     private ValueAnimator pressAnimator;
@@ -216,6 +260,10 @@ public class ModernKeyboardView extends View {
         } else if (key.label.equals("SHIFT") && (isShiftPressed || isCapsLock)) {
             keyColor = primaryColor;
             textColor = onPrimaryColor;
+        } else if (key == longPressedKey && isLongPressing) {
+            // Visual feedback for long press
+            keyColor = primaryColor;
+            textColor = onPrimaryColor;
         }
 
         // Apply press animation
@@ -259,6 +307,11 @@ public class ModernKeyboardView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        // If popup is showing, let it handle touch events
+        if (longPressPopup != null && longPressPopup.isShowing()) {
+            return true; // Don't dismiss popup on touch
+        }
+
         float x = event.getX();
         float y = event.getY();
 
@@ -269,28 +322,199 @@ public class ModernKeyboardView extends View {
                     pressedKey = touchedKey;
                     animateKeyPress(true);
                     invalidate();
+
+                    // Start long press timer
+                    startLongPressTimer(touchedKey);
                 }
                 return true;
 
             case MotionEvent.ACTION_UP:
-                if (pressedKey != null) {
+                // Cancel long press
+                cancelLongPressTimer();
+
+                if (pressedKey != null && !isLongPressing) {
                     handleKeyPress(pressedKey);
+                }
+                if (pressedKey != null) {
                     animateKeyPress(false);
                     pressedKey = null;
+                    isLongPressing = false;
                     invalidate();
                 }
                 return true;
 
             case MotionEvent.ACTION_CANCEL:
-                if (pressedKey != null) {
-                    animateKeyPress(false);
-                    pressedKey = null;
-                    invalidate();
+            case MotionEvent.ACTION_MOVE:
+                // Only cancel if moved far from original key
+                Key currentKey = findKeyAt(x, y);
+                if (currentKey != pressedKey && !isLongPressing) {
+                    cancelLongPressTimer();
+                    if (pressedKey != null) {
+                        animateKeyPress(false);
+                        pressedKey = null;
+                        invalidate();
+                    }
                 }
                 return true;
         }
 
         return super.onTouchEvent(event);
+    }
+
+    private void startLongPressTimer(Key key) {
+        // Only start timer for keys with alternatives
+        if (!RADE_ALTS.containsKey(key.label.toLowerCase())) {
+            return;
+        }
+
+        longPressedKey = key;
+        longPressRunnable = new Runnable() {
+            @Override
+            public void run() {
+                isLongPressing = true;
+                showLongPressPopup(key);
+            }
+        };
+        longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
+    }
+
+    private void cancelLongPressTimer() {
+        if (longPressRunnable != null) {
+            longPressHandler.removeCallbacks(longPressRunnable);
+            longPressRunnable = null;
+        }
+        hideLongPressPopup();
+    }
+
+    private void showLongPressPopup(Key key) {
+        String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
+        if (alternatives == null || alternatives.length == 0) return;
+
+        // Create a proper popup with all alternatives
+        showAlternativesPopup(key, alternatives);
+
+        // Add vibration feedback for long press
+        try {
+            android.os.Vibrator vibrator = (android.os.Vibrator) getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(100);
+                }
+            }
+        } catch (Exception e) {
+            // Silent fail
+        }
+    }
+
+    private void showAlternativesPopup(Key key, String[] alternatives) {
+        if (longPressPopup != null && longPressPopup.isShowing()) {
+            longPressPopup.dismiss();
+        }
+
+        // Create popup layout
+        android.widget.LinearLayout popupLayout = new android.widget.LinearLayout(getContext());
+        popupLayout.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        popupLayout.setBackgroundColor(surfaceColor);
+        popupLayout.setPadding(16, 12, 16, 12);
+
+        // Add border and rounded corners
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(surfaceColor);
+        background.setCornerRadius(12);
+        background.setStroke(2, primaryColor);
+        popupLayout.setBackground(background);
+
+        // Add shadow/elevation effect
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            popupLayout.setElevation(16);
+        }
+
+        // Create buttons for each alternative
+        for (int i = 0; i < alternatives.length; i++) {
+            final String alt = alternatives[i];
+            android.widget.Button altButton = new android.widget.Button(getContext());
+            altButton.setText(alt);
+            altButton.setTextColor(onSurfaceColor);
+            altButton.setTextSize(18);
+
+            // Create button background
+            android.graphics.drawable.GradientDrawable buttonBg = new android.graphics.drawable.GradientDrawable();
+            buttonBg.setColor(surfaceVariantColor);
+            buttonBg.setCornerRadius(8);
+            altButton.setBackground(buttonBg);
+
+            altButton.setPadding(20, 12, 20, 12);
+            altButton.setMinWidth(0);
+            altButton.setMinimumWidth(0);
+
+            // Set margins between buttons
+            android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            if (i > 0) {
+                params.leftMargin = 8;
+            }
+            altButton.setLayoutParams(params);
+
+            altButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (keyPressListener != null) {
+                        keyPressListener.onKeyPressed(alt, alt.charAt(0));
+                    }
+                    hideLongPressPopup();
+                    // Reset state
+                    pressedKey = null;
+                    isLongPressing = false;
+                    invalidate();
+                }
+            });
+
+            popupLayout.addView(altButton);
+        }
+
+        // Create popup with proper flags
+        longPressPopup = new PopupWindow(popupLayout,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                false); // Don't make it focusable to prevent dismissing on outside touch
+
+        longPressPopup.setOutsideTouchable(false);
+        longPressPopup.setTouchable(true);
+
+        // Calculate proper popup position (centered above the key)
+        popupLayout.measure(android.view.View.MeasureSpec.UNSPECIFIED, android.view.View.MeasureSpec.UNSPECIFIED);
+        int popupWidth = popupLayout.getMeasuredWidth();
+        int popupHeight = popupLayout.getMeasuredHeight();
+
+        // Position above the key, centered horizontally
+        int popupX = (int)(key.x + key.width / 2 - popupWidth / 2);
+        int popupY = (int)(key.y - popupHeight - 20); // 20px above the key
+
+        // Ensure popup stays within screen bounds
+        if (popupX < 10) popupX = 10;
+        if (popupX + popupWidth > getWidth() - 10) popupX = getWidth() - popupWidth - 10;
+        if (popupY < 10) popupY = (int)(key.y + key.height + 20); // Show below if no room above
+
+        longPressPopup.showAtLocation(this, android.view.Gravity.NO_GRAVITY, popupX, popupY);
+
+        // Add a delayed auto-dismiss as backup
+        postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                hideLongPressPopup();
+            }
+        }, 5000); // 5 seconds timeout
+    }
+
+    private void hideLongPressPopup() {
+        if (longPressPopup != null && longPressPopup.isShowing()) {
+            longPressPopup.dismiss();
+            longPressPopup = null;
+        }
     }
 
     private Key findKeyAt(float x, float y) {
@@ -341,11 +565,14 @@ public class ModernKeyboardView extends View {
             case "SYM":
                 keyPressListener.onSpecialKeyPressed(KEY_SYMBOL);
                 break;
+            case "˘":
+                // Special Rade breve character
+                keyPressListener.onKeyPressed("˘", 774); // Unicode combining breve
+                break;
             default:
-                // Check if this key has Vietnamese alternatives
-                if (VIETNAMESE_ALTS.containsKey(label.toLowerCase())) {
-                    // For now, just send the base character
-                    // Later we can add long-press popup for alternatives
+                // Check if this key has Rade alternatives
+                if (RADE_ALTS.containsKey(label.toLowerCase())) {
+                    // Regular key with potential alternatives
                     keyPressListener.onKeyPressed(label, label.charAt(0));
                 } else {
                     // Regular key

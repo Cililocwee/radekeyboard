@@ -55,17 +55,11 @@ public class ModernInputMethodService extends InputMethodService {
             }
         }
 
-        // Handle Vietnamese special characters
+        // Handle special Rade characters and combining breve
         String textToCommit = key;
-        switch (keyCode) {
-            case 226: textToCommit = "â"; break; // ă
-            case 234: textToCommit = "ê"; break; // ê
-            case 432: textToCommit = "ư"; break; // ư
-            case 244: textToCommit = "ô"; break; // ô
-            case 417: textToCommit = "ơ"; break; // ơ
-            case 273: textToCommit = "đ"; break; // đ
-            case 241: textToCommit = "ñ"; break; // ñ
-            // Add more as needed
+        if (keyCode == 774) {
+            // Combining breve - add it after the last character
+            textToCommit = "̆"; // Unicode combining breve U+0306
         }
 
         // Apply shift/caps
