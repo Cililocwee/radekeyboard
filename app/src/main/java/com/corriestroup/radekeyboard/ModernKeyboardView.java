@@ -63,11 +63,11 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("d", new String[]{"đ"});
 
         // Tone marks on g, h, j, k, l
-        RADE_ALTS.put("g", new String[]{"̀"}); // Down tone (grave accent)
-        RADE_ALTS.put("h", new String[]{"̉"}); // Hoi tone (hook above)
-        RADE_ALTS.put("j", new String[]{"̃"}); // Nga tone (tilde)
-        RADE_ALTS.put("k", new String[]{"́"}); // Up tone (acute accent)
-        RADE_ALTS.put("l", new String[]{"̣"}); // Nang tone (dot below)
+        RADE_ALTS.put("g", new String[]{"̀","-"}); // Down tone (grave accent)
+        RADE_ALTS.put("h", new String[]{"̉","+"}); // Hoi tone (hook above)
+        RADE_ALTS.put("j", new String[]{"̃","="}); // Nga tone (tilde)
+        RADE_ALTS.put("k", new String[]{"́","("}); // Up tone (acute accent)
+        RADE_ALTS.put("l", new String[]{"̣",")"}); // Nang tone (dot below)
 
         // Other symbol alternatives (keeping your existing ones)
         RADE_ALTS.put("q", new String[]{"%"});
@@ -96,10 +96,49 @@ public class ModernKeyboardView extends View {
 
         // Long-press alternatives for bottom row
         RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
-        RADE_ALTS.put(".", new String[]{"?", "!", ",", ";", ":"});
+        RADE_ALTS.put(".", new String[]{",","!", "?", ";", ":"});
 
-        // Symbol mode (123) alternatives
-//        RADE_ALTS.put("123", new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"});
+
+    }
+
+    // Add this new map after your RADE_ALTS map
+    private static final Map<String, Integer> ALT_PREVIEW_COUNT = new HashMap<>();
+    static {
+        // All keys with alternatives set to show 1 preview by default
+        ALT_PREVIEW_COUNT.put("a", 1); // Show ă (first alternative)
+        ALT_PREVIEW_COUNT.put("e", 1); // Show ê
+        ALT_PREVIEW_COUNT.put("o", 1); // Show ô (first alternative)
+        ALT_PREVIEW_COUNT.put("u", 1); // Show ư
+        ALT_PREVIEW_COUNT.put("d", 1); // Show đ
+
+        // Tone marks
+        ALT_PREVIEW_COUNT.put("g", 2); // Show ̀
+        ALT_PREVIEW_COUNT.put("h", 2); // Show ̉
+        ALT_PREVIEW_COUNT.put("j", 2); // Show ̃
+        ALT_PREVIEW_COUNT.put("k", 2); // Show ́
+        ALT_PREVIEW_COUNT.put("l", 2); // Show ̣
+
+        // Symbol alternatives
+        ALT_PREVIEW_COUNT.put("q", 1); // Show %
+        ALT_PREVIEW_COUNT.put("w", 1); // Show ^
+        ALT_PREVIEW_COUNT.put("r", 1); // Show |
+        ALT_PREVIEW_COUNT.put("t", 1); // Show [
+        ALT_PREVIEW_COUNT.put("y", 1); // Show ]
+        ALT_PREVIEW_COUNT.put("i", 1); // Show >
+        ALT_PREVIEW_COUNT.put("p", 1); // Show }
+        ALT_PREVIEW_COUNT.put("s", 1); // Show #
+        ALT_PREVIEW_COUNT.put("f", 1); // Show *
+        ALT_PREVIEW_COUNT.put("z", 1); // Show _
+        ALT_PREVIEW_COUNT.put("x", 1); // Show $
+        ALT_PREVIEW_COUNT.put("c", 1); // Show "
+        ALT_PREVIEW_COUNT.put("v", 1); // Show '
+        ALT_PREVIEW_COUNT.put("b", 1); // Show :
+        ALT_PREVIEW_COUNT.put("n", 1); // Show ;
+        ALT_PREVIEW_COUNT.put("m", 1); // Show /
+
+        // Bottom row
+        ALT_PREVIEW_COUNT.put(",", 1); // Show ˘
+        ALT_PREVIEW_COUNT.put(".", 1); // Show ? (first alternative)
     }
     private List<Key> keys = new ArrayList<>();
     private Paint keyPaint, textPaint, backgroundPaint;
@@ -322,7 +361,9 @@ public class ModernKeyboardView extends View {
 
                 // Draw alternative character preview (smaller, less opaque)
                 String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
-                if (alternatives != null && alternatives.length > 0) {
+                Integer previewCount = ALT_PREVIEW_COUNT.get(key.label.toLowerCase());
+
+                if (alternatives != null && alternatives.length > 0 && previewCount != null && previewCount > 0) {
                     // Save original text size and color
                     float originalSize = textPaint.getTextSize();
                     int originalColor = textPaint.getColor();
@@ -331,9 +372,25 @@ public class ModernKeyboardView extends View {
                     textPaint.setTextSize(originalSize * 0.6f);
                     textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
 
-                    // Draw first alternative above main text - positioned relative to key center
-                    float altY = key.y + key.height / 2 - originalSize * 0.6f;
-                    canvas.drawText(alternatives[0], centerX, altY, textPaint);
+                    // Calculate how many alternatives to show (don't exceed available alternatives)
+                    int numToShow = Math.min(previewCount, alternatives.length);
+
+                    if (numToShow == 1) {
+                        // Single alternative - center it above main text
+                        float altY = key.y + key.height / 2 - originalSize * 0.6f;
+                        canvas.drawText(alternatives[0], centerX, altY, textPaint);
+                    } else {
+                        // Multiple alternatives - spread them horizontally
+                        float totalWidth = key.width * 0.8f; // Use 80% of key width
+                        float spacing = totalWidth / (numToShow + 1); // Evenly space them
+                        float startX = key.x + key.width * 0.1f; // Start at 10% from left edge
+                        float altY = key.y + key.height / 2 - originalSize * 0.6f;
+
+                        for (int i = 0; i < numToShow; i++) {
+                            float altX = startX + spacing * (i + 1);
+                            canvas.drawText(alternatives[i], altX, altY, textPaint);
+                        }
+                    }
 
                     // Restore original paint settings
                     textPaint.setTextSize(originalSize);
@@ -513,8 +570,17 @@ public class ModernKeyboardView extends View {
         // Create buttons for each alternative
         for (int i = 0; i < alternatives.length; i++) {
             final String alt = alternatives[i];
+
+            // Apply uppercase if shift is pressed and it's a letter
+            String displayText = alt;
+            String commitText = alt;
+            if ((isShiftPressed || isCapsLock) && alt.length() == 1 && Character.isLetter(alt.charAt(0))) {
+                displayText = alt.toUpperCase();
+                commitText = alt.toUpperCase();
+            }
+
             android.widget.Button altButton = new android.widget.Button(getContext());
-            altButton.setText(alt);
+            altButton.setText(displayText);
             altButton.setTextColor(onSurfaceColor);
             altButton.setTextSize(18);
 
@@ -538,11 +604,13 @@ public class ModernKeyboardView extends View {
             }
             altButton.setLayoutParams(params);
 
+            // Capture the final commitText for the onClick listener
+            final String finalCommitText = commitText;
             altButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (keyPressListener != null) {
-                        keyPressListener.onKeyPressed(alt, alt.charAt(0));
+                        keyPressListener.onKeyPressed(finalCommitText, finalCommitText.charAt(0));
                     }
                     hideLongPressPopup();
                     // Reset state
