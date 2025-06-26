@@ -369,7 +369,7 @@ public class ModernKeyboardView extends View {
                     int originalColor = textPaint.getColor();
 
                     // Set smaller size and semi-transparent color
-                    textPaint.setTextSize(originalSize * 0.6f);
+                    textPaint.setTextSize(originalSize * 0.7f);
                     textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
 
                     // Calculate how many alternatives to show (don't exceed available alternatives)
@@ -381,9 +381,9 @@ public class ModernKeyboardView extends View {
                         canvas.drawText(alternatives[0], centerX, altY, textPaint);
                     } else {
                         // Multiple alternatives - spread them horizontally
-                        float totalWidth = key.width * 0.8f; // Use 80% of key width
+                        float totalWidth = key.width * 0.4f; // Use 80% of key width
                         float spacing = totalWidth / (numToShow + 1); // Evenly space them
-                        float startX = key.x + key.width * 0.1f; // Start at 10% from left edge
+                        float startX = key.x + key.width * 0.3f; // Start at 10% from left edge
                         float altY = key.y + key.height / 2 - originalSize * 0.6f;
 
                         for (int i = 0; i < numToShow; i++) {
