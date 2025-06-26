@@ -328,18 +328,27 @@ public class ModernKeyboardView extends View {
         if (key == pressedKey) {
             keyColor = primaryColor;
             textColor = onPrimaryColor;
-        } else if (key.label.equals("SHIFT") && (isShiftPressed || isCapsLock)) {
-            keyColor = primaryColor;
-            textColor = onPrimaryColor;
+        } else if (key.label.equals("SHIFT")) {
+            // Special handling for SHIFT key
+            if (isCapsLock) {
+                keyColor = primaryColor; // Blue background for caps lock
+                textColor = onPrimaryColor;
+            } else if (isShiftPressed) {
+                keyColor = surfaceVariantColor; // Normal background for shift
+                textColor = primaryColor;
+            } else {
+                keyColor = surfaceVariantColor; // Normal background
+                textColor = primaryColor;
+            }
         } else if (key == longPressedKey && isLongPressing) {
             // Visual feedback for long press
             keyColor = primaryColor;
             textColor = onPrimaryColor;
         } else if (isSpecialKey) {
             // Special keys use primary color as default
-//            keyColor = primaryColor;
             textColor = primaryColor;
         }
+
 
         // Apply press animation
         float scale = (key == pressedKey) ? pressScale : 1.0f;
@@ -417,6 +426,7 @@ public class ModernKeyboardView extends View {
             }
         }
     }
+
     private boolean shouldUseDrawable(String label) {
         return label.equals("SHIFT") || label.equals("DELETE") || label.equals("ENTER");
     }
@@ -438,7 +448,14 @@ public class ModernKeyboardView extends View {
 
     private int getDrawableForKey(String label) {
         switch (label) {
-            case "SHIFT": return R.drawable.ic_shift;
+            case "SHIFT":
+                if (isCapsLock) {
+                    return R.drawable.ic_shift;
+                } else if (isShiftPressed) {
+                    return R.drawable.ic_shift;
+                } else {
+                    return R.drawable.ic_shift_hollow;
+                }
             case "DELETE": return R.drawable.ic_delete;
             case "ENTER": return R.drawable.ic_enter;
             default: return 0;
