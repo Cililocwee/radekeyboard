@@ -138,7 +138,7 @@ public class ModernKeyboardView extends View {
 
         // Bottom row
         ALT_PREVIEW_COUNT.put(",", 1); // Show ˘
-        ALT_PREVIEW_COUNT.put(".", 1); // Show ? (first alternative)
+        ALT_PREVIEW_COUNT.put(".", 3); // Show ? (first alternative)
     }
     private List<Key> keys = new ArrayList<>();
     private Paint keyPaint, textPaint, backgroundPaint;
@@ -170,11 +170,12 @@ public class ModernKeyboardView extends View {
     private int keyboardHeight;
 
     // Colors (Material Design 3)
-    private int surfaceColor = Color.parseColor("#1C1B1F");
-    private int onSurfaceColor = Color.parseColor("#E6E0E9");
-    private int primaryColor = Color.parseColor("#D0BCFF");
-    private int onPrimaryColor = Color.parseColor("#381E72");
-    private int surfaceVariantColor = Color.parseColor("#49454F");
+    private int surfaceColor = Color.parseColor("#e5e5e5");         // Background
+    private int onSurfaceColor = Color.parseColor("#4f4f4f");       // Text
+    private int primaryColor = Color.parseColor("#27b8cd");         // Accent
+    private int onPrimaryColor = Color.parseColor("#e7e7e7");       // Text on Accent
+    private int surfaceVariantColor = Color.parseColor("#e7e7e7");  //  Keys
+
 
     public interface OnKeyPressListener {
         void onKeyPressed(String key, int keyCode);
@@ -310,6 +311,15 @@ public class ModernKeyboardView extends View {
         int keyColor = surfaceVariantColor;
         int textColor = onSurfaceColor;
 
+        // Special keys that should always use primary color
+        boolean isSpecialKey = key.label.equals("DELETE") ||
+                key.label.equals("SHIFT") ||
+                key.label.equals("123") ||
+                key.label.equals("ABC") ||
+                key.label.equals(",") ||
+                key.label.equals(".") ||
+                key.label.equals("ENTER");
+
         if (key == pressedKey) {
             keyColor = primaryColor;
             textColor = onPrimaryColor;
@@ -320,6 +330,10 @@ public class ModernKeyboardView extends View {
             // Visual feedback for long press
             keyColor = primaryColor;
             textColor = onPrimaryColor;
+        } else if (isSpecialKey) {
+            // Special keys use primary color as default
+//            keyColor = primaryColor;
+            textColor = primaryColor;
         }
 
         // Apply press animation
@@ -368,9 +382,9 @@ public class ModernKeyboardView extends View {
                     float originalSize = textPaint.getTextSize();
                     int originalColor = textPaint.getColor();
 
-                    // Set smaller size and semi-transparent color
+                    // Set smaller size and semi-transparent color (always use onSurfaceColor for previews)
                     textPaint.setTextSize(originalSize * 0.7f);
-                    textPaint.setColor(Color.argb(128, Color.red(textColor), Color.green(textColor), Color.blue(textColor))); // 50% opacity
+                    textPaint.setColor(Color.argb(128, Color.red(onSurfaceColor), Color.green(onSurfaceColor), Color.blue(onSurfaceColor))); // 50% opacity of normal text color
 
                     // Calculate how many alternatives to show (don't exceed available alternatives)
                     int numToShow = Math.min(previewCount, alternatives.length);
