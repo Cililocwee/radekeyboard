@@ -39,50 +39,52 @@ public class ModernKeyboardView extends View {
             {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
             {"a", "s", "d", "f", "g", "h", "j", "k", "l"},
             {"SHIFT", "z", "x", "c", "v", "b", "n", "m", "DELETE"},
-            {"123", ",", "SPACE", ".", "ENTER"}
+            {"123", ",", " ", ".", "ENTER"}
     };
 
     private static final String[][] SYMBOL_LAYOUT = {
-            {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"},
+
             {"[","]","{","}","<",">","^","÷"},
             {"@", "#", "$", "&", "_", "-", "(", ")", "=", "%"},
             {"~", "\"", "*", "'", ":", "/", "!", "?", "+", "DELETE"},
-            {"ABC", ",", "SPACE", ".", "ENTER"}
+            {"ABC", ",", " ", ".", "ENTER"}
     };
 
     // Vietnamese/Rade diacritics map for long-press
     private static final Map<String, String[]> RADE_ALTS = new HashMap<>();
     static {
-        // Rade/Vietnamese characters with diacritics
-        RADE_ALTS.put("a", new String[]{"ă", "â", "á", "à", "ạ", "ả", "ã", "ắ", "ằ", "ặ", "ẳ", "ẵ", "ấ", "ầ", "ậ", "ẩ", "ẫ"});
-        RADE_ALTS.put("e", new String[]{"ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
-        RADE_ALTS.put("i", new String[]{"í", "ì", "ị", "ỉ", "ĩ"});
-        RADE_ALTS.put("o", new String[]{"ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
-        RADE_ALTS.put("u", new String[]{"ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
-        RADE_ALTS.put("y", new String[]{"ý", "ỳ", "ỵ", "ỷ", "ỹ"});
+        // Vowels with only their base variations (no tones)
+        RADE_ALTS.put("a", new String[]{"ă", "â"});
+        RADE_ALTS.put("e", new String[]{"ê"});
+        RADE_ALTS.put("i", new String[]{});  // No variations for i
+        RADE_ALTS.put("o", new String[]{"ô", "ơ"});
+        RADE_ALTS.put("u", new String[]{"ư"});
+        RADE_ALTS.put("y", new String[]{});  // No variations for y
         RADE_ALTS.put("d", new String[]{"đ"});
 
-        // Numbers have symbols as alternatives (from your original layout)
+        // Tone marks on g, h, j, k, l
+        RADE_ALTS.put("g", new String[]{"̀"}); // Down tone (grave accent)
+        RADE_ALTS.put("h", new String[]{"̉"}); // Hoi tone (hook above)
+        RADE_ALTS.put("j", new String[]{"̃"}); // Nga tone (tilde)
+        RADE_ALTS.put("k", new String[]{"́"}); // Up tone (acute accent)
+        RADE_ALTS.put("l", new String[]{"̣"}); // Nang tone (dot below)
+
+        // Other symbol alternatives (keeping your existing ones)
         RADE_ALTS.put("q", new String[]{"%"});
         RADE_ALTS.put("w", new String[]{"^"});
-        RADE_ALTS.put("e", new String[]{"~", "ê", "é", "è", "ẹ", "ẻ", "ẽ", "ế", "ề", "ệ", "ể", "ễ"});
         RADE_ALTS.put("r", new String[]{"|"});
         RADE_ALTS.put("t", new String[]{"["});
-        RADE_ALTS.put("y", new String[]{"]", "ý", "ỳ", "ỵ", "ỷ", "ỹ"});
-        RADE_ALTS.put("u", new String[]{"<", "ư", "ú", "ù", "ụ", "ủ", "ũ", "ứ", "ừ", "ự", "ử", "ữ"});
-        RADE_ALTS.put("i", new String[]{">", "í", "ì", "ị", "ỉ", "ĩ"});
-        RADE_ALTS.put("o", new String[]{"{", "ô", "ơ", "ó", "ò", "ọ", "ỏ", "õ", "ố", "ồ", "ộ", "ổ", "ỗ", "ớ", "ờ", "ợ", "ở", "ỡ"});
+        RADE_ALTS.put("y", new String[]{"]"});
+        RADE_ALTS.put("u", new String[]{"<", "ư"});
+        RADE_ALTS.put("i", new String[]{">"});
+        RADE_ALTS.put("o", new String[]{"{", "ô", "ơ"});
         RADE_ALTS.put("p", new String[]{"}"});
 
-        RADE_ALTS.put("a", new String[]{"@", "ă", "â", "á", "à", "ạ", "ả", "ã", "ắ", "ằ", "ặ", "ẳ", "ẵ", "ấ", "ầ", "ậ", "ẩ", "ẫ"});
+        RADE_ALTS.put("a", new String[]{"@", "ă", "â"});
         RADE_ALTS.put("s", new String[]{"#"});
         RADE_ALTS.put("d", new String[]{"&", "đ"});
         RADE_ALTS.put("f", new String[]{"*"});
-        RADE_ALTS.put("g", new String[]{"-"});
-        RADE_ALTS.put("h", new String[]{"+"});
-        RADE_ALTS.put("j", new String[]{"="});
-        RADE_ALTS.put("k", new String[]{"("});
-        RADE_ALTS.put("l", new String[]{")"});
+        // g, h, j, k, l now have tone marks instead
 
         RADE_ALTS.put("z", new String[]{"_"});
         RADE_ALTS.put("x", new String[]{"$"});
@@ -92,15 +94,13 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("n", new String[]{";"});
         RADE_ALTS.put("m", new String[]{"/"});
 
-
         // Long-press alternatives for bottom row
         RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
         RADE_ALTS.put(".", new String[]{"?", "!", ",", ";", ":"});
 
         // Symbol mode (123) alternatives
-        RADE_ALTS.put("123", new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"});
+//        RADE_ALTS.put("123", new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"});
     }
-
     private List<Key> keys = new ArrayList<>();
     private Paint keyPaint, textPaint, backgroundPaint;
     private OnKeyPressListener keyPressListener;
@@ -177,7 +177,11 @@ public class ModernKeyboardView extends View {
         float density = getResources().getDisplayMetrics().density;
         keyHeight = 48 * density; // 48dp
         keyMargin = 4 * density;  // 4dp
-        keyboardHeight = (int) (keyHeight * 5.5f + keyMargin * 6);
+
+        // Calculate keyboard height based on current layout
+        String[][] currentLayout = isSymbolMode ? SYMBOL_LAYOUT : QWERTY_LAYOUT;
+        int numberOfRows = currentLayout.length;
+        keyboardHeight = (int) (keyHeight * numberOfRows + keyMargin * (numberOfRows + 1));
 
         textPaint.setTextSize(16 * density); // 16sp
     }
@@ -200,7 +204,7 @@ public class ModernKeyboardView extends View {
             for (String keyLabel : rowKeys) {
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     totalWeight += 1.5f; // 1.5x width
-                } else if (keyLabel.equals("SPACE")) {
+                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {  // ← Updated this line
                     totalWeight += 5.0f; // 5x width
                 } else if (keyLabel.equals("ENTER")) {
                     totalWeight += 1.5f;
@@ -221,7 +225,7 @@ public class ModernKeyboardView extends View {
                 // Set key widths based on type
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     keyWidth = unitWidth * 1.5f;
-                } else if (keyLabel.equals("SPACE")) {
+                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {  // ← Updated this line
                     keyWidth = unitWidth * 5.0f;
                 } else if (keyLabel.equals("ENTER")) {
                     keyWidth = unitWidth * 1.5f;
@@ -679,8 +683,10 @@ public class ModernKeyboardView extends View {
 
     public void toggleSymbolMode() {
         isSymbolMode = !isSymbolMode;
+        calculateDimensions(); // Recalculate keyboard height for new layout
         createKeys();
         invalidate();
+        requestLayout(); // Request a new layout measurement
     }
 
     private static class Key {
