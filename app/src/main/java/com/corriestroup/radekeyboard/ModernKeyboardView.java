@@ -221,7 +221,10 @@ public class ModernKeyboardView extends View {
         // Calculate keyboard height based on current layout
         String[][] currentLayout = isSymbolMode ? SYMBOL_LAYOUT : QWERTY_LAYOUT;
         int numberOfRows = currentLayout.length;
-        keyboardHeight = (int) (keyHeight * numberOfRows + keyMargin * (numberOfRows + 1));
+
+        // Reduce top margin to make keyboard shorter
+        float topMargin = keyMargin * 0.2f; // Use half the normal margin for top
+        keyboardHeight = (int) (keyHeight * numberOfRows + topMargin + keyMargin * numberOfRows);
 
         textPaint.setTextSize(16 * density); // 16sp
     }
@@ -234,17 +237,18 @@ public class ModernKeyboardView extends View {
         if (totalWidth == 0) return; // View not measured yet
 
         float availableWidth = totalWidth - keyMargin * 2;
+        float topMargin = keyMargin * 0.5f; // Use reduced top margin
 
         for (int row = 0; row < layout.length; row++) {
             String[] rowKeys = layout[row];
-            float y = keyMargin + row * (keyHeight + keyMargin);
+            float y = topMargin + row * (keyHeight + keyMargin); // Use reduced top margin
 
             // Calculate total weight for this row
             float totalWeight = 0;
             for (String keyLabel : rowKeys) {
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     totalWeight += 1.5f; // 1.5x width
-                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {  // ← Updated this line
+                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {
                     totalWeight += 5.0f; // 5x width
                 } else if (keyLabel.equals("ENTER")) {
                     totalWeight += 1.5f;
@@ -265,7 +269,7 @@ public class ModernKeyboardView extends View {
                 // Set key widths based on type
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     keyWidth = unitWidth * 1.5f;
-                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {  // ← Updated this line
+                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {
                     keyWidth = unitWidth * 5.0f;
                 } else if (keyLabel.equals("ENTER")) {
                     keyWidth = unitWidth * 1.5f;
@@ -280,7 +284,6 @@ public class ModernKeyboardView extends View {
             }
         }
     }
-
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -351,10 +354,9 @@ public class ModernKeyboardView extends View {
         );
 
         // Draw key background with rounded corners
-        if (!isNumberKey(key.label)) {
-            keyPaint.setColor(keyColor);
-            canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
-        }
+        keyPaint.setColor(keyColor);
+        canvas.drawRoundRect(keyRect, 8, 8, keyPaint);
+
 
         // Draw key text or drawable
         if (shouldUseDrawable(key.label)) {
