@@ -91,6 +91,36 @@ public class ModernInputMethodService extends InputMethodService {
         ic.commitText(textToCommit, 1);
     }
 
+    private void deleteLastWord() {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+
+        // Get text before cursor (we'll get more than we need and trim it)
+        CharSequence beforeCursor = ic.getTextBeforeCursor(1000, 0);
+        if (beforeCursor == null || beforeCursor.length() == 0) return;
+
+        String text = beforeCursor.toString();
+        int originalLength = text.length();
+        int wordStart = originalLength;
+
+        // Skip any trailing whitespace first
+        while (wordStart > 0 && Character.isWhitespace(text.charAt(wordStart - 1))) {
+            wordStart--;
+        }
+
+        // Then skip the actual word characters
+        while (wordStart > 0 && !Character.isWhitespace(text.charAt(wordStart - 1))) {
+            wordStart--;
+        }
+
+        // Calculate how many characters to delete
+        int charsToDelete = originalLength - wordStart;
+
+        // Delete the characters
+        if (charsToDelete > 0) {
+            ic.deleteSurroundingText(charsToDelete, 0);
+        }
+    }
     private boolean isToneMark(String key) {
         return key.equals("̀") || key.equals("́") || key.equals("̂") ||
                 key.equals("̃") || key.equals("̉") || key.equals("̣");
@@ -131,6 +161,10 @@ public class ModernInputMethodService extends InputMethodService {
         switch (specialKey) {
             case ModernKeyboardView.KEY_DELETE:
                 ic.deleteSurroundingText(1, 0);
+                break;
+
+            case ModernKeyboardView.KEY_DELETE_WORD:  // <- Add this new case
+                deleteLastWord();
                 break;
 
             case ModernKeyboardView.KEY_SHIFT:

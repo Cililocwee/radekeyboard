@@ -34,6 +34,8 @@ public class ModernKeyboardView extends View {
     public static final int KEY_SPACE = -4;
     public static final int KEY_SYMBOL = -5;
     public static final int KEY_NUMBERS = -6;
+    public static final int KEY_DELETE_WORD = -7;
+
 
     // Keyboard layouts
     private static final String[][] QWERTY_LAYOUT = {{"1","2","3","4","5","6","7","8","9","0"},
@@ -132,6 +134,8 @@ public class ModernKeyboardView extends View {
         // Bottom row
         ALT_PREVIEW_COUNT.put(",", 1); // Show ˘
         ALT_PREVIEW_COUNT.put(".", 3); // Show ? (first alternative)
+
+
     }
     private List<Key> keys = new ArrayList<>();
     private Paint keyPaint, textPaint, backgroundPaint;
@@ -159,8 +163,8 @@ public class ModernKeyboardView extends View {
     private ValueAnimator pressAnimator;
     private float pressScale = 1.0f;
 
-    // Vibratino
-    private boolean vibrationEnabled = false;
+    // Vibration
+    private boolean vibrationEnabled = true;
 
     // Dimensions
     private float keyHeight;
@@ -591,6 +595,11 @@ public class ModernKeyboardView extends View {
     private void handleAlternativeCommit() {
         if (keyPressListener == null || longPressedKey == null) return;
 
+        // Special handling for DELETE key long press - don't do anything since it already fired
+        if (longPressedKey.label.equals("DELETE")) {
+            return; // Just return, don't send any additional key presses
+        }
+
         if (selectedAltIndex >= 0 && selectedAltIndex < altButtons.size()) {
             // User selected an alternative
             String selectedText = altButtons.get(selectedAltIndex).getText().toString();
@@ -620,6 +629,20 @@ public class ModernKeyboardView extends View {
         }
     }
     private void startLongPressTimer(Key key) {
+        // Special handling for DELETE key - always start timer
+        if (key.label.equals("DELETE")) {
+            longPressedKey = key;
+            longPressRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    isLongPressing = true;
+                    keyPressListener.onSpecialKeyPressed(KEY_DELETE_WORD);
+                }
+            };
+            longPressHandler.postDelayed(longPressRunnable, 400);
+            return;
+        }
+
         // Only start timer for keys with alternatives
         if (!RADE_ALTS.containsKey(key.label.toLowerCase())) {
             return;
@@ -657,9 +680,9 @@ public class ModernKeyboardView extends View {
                 android.os.Vibrator vibrator = (android.os.Vibrator) getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
                 if (vibrator != null && vibrator.hasVibrator()) {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(50, 50));
                     } else {
-                        vibrator.vibrate(100);
+                        vibrator.vibrate(25);
                     }
                 }
             } catch (Exception e) {
