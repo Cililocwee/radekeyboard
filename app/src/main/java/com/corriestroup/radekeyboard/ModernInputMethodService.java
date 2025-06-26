@@ -59,6 +59,28 @@ public class ModernInputMethodService extends InputMethodService {
             }
         }
 
+        // Handle punctuation that should replace a single trailing space
+        if (key.equals(".") || key.equals("?") || key.equals("!")) {
+            // Check if there's exactly one space before the cursor
+            CharSequence beforeCursor = ic.getTextBeforeCursor(2, 0);
+            if (beforeCursor != null && beforeCursor.length() >= 1) {
+                String beforeText = beforeCursor.toString();
+
+                // If there's exactly one space at the end, replace it
+                if (beforeText.endsWith(" ") && (beforeText.length() == 1 || !beforeText.endsWith("  "))) {
+                    // Delete the trailing space
+                    ic.deleteSurroundingText(1, 0);
+                }
+            }
+
+            // Commit the punctuation + space
+            ic.commitText(key + " ", 1);
+
+            // Check if we should auto-capitalize after this text
+            updateAutoCapitalization();
+            return; // Exit early since we handled everything
+        }
+
         // Handle tone marks and combining characters
         String textToCommit = key;
         if (isToneMark(key) || key.equals("˘")) {
