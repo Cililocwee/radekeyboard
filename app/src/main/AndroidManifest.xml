@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.corriestroup.radekeyboard">
 
-    <!-- No additional permissions needed for basic IME functionality -->
+    <!-- Permissions for keyboard functionality -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -22,7 +23,7 @@
         </activity>
 
         <service
-            android:name="com.corriestroup.radekeyboard.MyInputMethodService"
+            android:name="com.corriestroup.radekeyboard.ModernInputMethodService"
             android:exported="true"
             android:enabled="true"
             android:permission="android.permission.BIND_INPUT_METHOD">
