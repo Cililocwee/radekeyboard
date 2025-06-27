@@ -3,6 +3,7 @@ package com.corriestroup.radekeyboard;
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,16 +15,25 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.Locale;
+
+
+
 
 public class OnboardingActivity extends AppCompatActivity {
 
     private KeyboardSetupChecker setupChecker;
     private LinearLayout welcomeScreen, step1Screen, step2Screen, step3Screen, completeScreen;
     private Button nextButton, enableButton, selectButton, finishButton;
+    private TextView langEnglish, langVietnamese;
+
     private ImageView step1Check, step2Check, step3Check;
     private TextView step1Status, step2Status, step3Status;
     private Handler statusHandler;
     private Runnable statusChecker;
+
+    private static final String PREF_LANGUAGE = "selected_language";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +104,15 @@ public class OnboardingActivity extends AppCompatActivity {
         selectButton = findViewById(R.id.select_button);
         finishButton = findViewById(R.id.finish_button);
 
+        // Language toggle TextViews
+        langEnglish = findViewById(R.id.lang_english);
+        langVietnamese = findViewById(R.id.lang_vietnamese);
+
+        // Restore the saved language state
+        String savedLanguage = getSavedLanguage();
+        updateLanguageButtonStates(savedLanguage);
+
+
         // Status indicators
         step1Check = findViewById(R.id.step1_check);
         step2Check = findViewById(R.id.step2_check);
@@ -107,6 +126,10 @@ public class OnboardingActivity extends AppCompatActivity {
         enableButton.setOnClickListener(v -> openLanguageSettings());
         selectButton.setOnClickListener(v -> openInputMethodSettings());
         finishButton.setOnClickListener(v -> finishOnboarding());
+
+        // Language toggle listeners
+        langEnglish.setOnClickListener(v -> switchLanguage("en"));
+        langVietnamese.setOnClickListener(v -> switchLanguage("vi"));
     }
 
     private void showWelcomeScreen() {
@@ -226,4 +249,58 @@ public class OnboardingActivity extends AppCompatActivity {
     private void finishOnboarding() {
         finish(); // Return to MainActivity
     }
+
+    private void switchLanguage(String languageCode) {
+        // Save the language preference first
+        saveLanguagePreference(languageCode);
+
+        // Update TextView styles to show selection
+        updateLanguageButtonStates(languageCode);
+
+
+        // Apply locale change
+        setLocale(languageCode);
+    }
+
+    private void updateLanguageButtonStates(String languageCode) {
+        if (languageCode.equals("en")) {
+            langEnglish.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            langEnglish.setTypeface(null, android.graphics.Typeface.BOLD);
+            langVietnamese.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            langVietnamese.setTypeface(null, android.graphics.Typeface.NORMAL);
+        } else {
+            langVietnamese.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+            langVietnamese.setTypeface(null, android.graphics.Typeface.BOLD);
+            langEnglish.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            langEnglish.setTypeface(null, android.graphics.Typeface.NORMAL);
+        }
+    }
+
+    private void setLocale(String languageCode) {
+        Locale locale = new Locale(languageCode);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.setLocale(locale);
+        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
+
+        // Recreate activity to apply changes
+        recreate();
+    }
+
+    // Save the language preference
+    private void saveLanguagePreference(String languageCode) {
+        getSharedPreferences("app_prefs", MODE_PRIVATE)
+                .edit()
+                .putString(PREF_LANGUAGE, languageCode)
+                .apply();
+    }
+
+    // Get saved language preference
+    private String getSavedLanguage() {
+        return getSharedPreferences("app_prefs", MODE_PRIVATE)
+                .getString(PREF_LANGUAGE, "en"); // Default to English
+    }
+
+
+
 }

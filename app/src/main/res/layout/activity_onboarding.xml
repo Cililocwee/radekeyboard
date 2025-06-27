@@ -22,17 +22,60 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:visibility="visible">
 
+            <!-- Language Toggle - Minimalist Tabs -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:id="@+id/lang_english"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="English"
+                    android:textSize="14sp"
+                    android:textColor="#6200EA"
+                    android:textStyle="bold"
+                    android:padding="12dp"
+                    android:background="@android:color/transparent"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="20dp"
+                    android:background="#E0E0E0"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:id="@+id/lang_vietnamese"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tiếng Việt"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:padding="12dp"
+                    android:background="@android:color/transparent"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⌨️"
                 android:textSize="64sp"
-                android:layout_marginTop="48dp" />
+                android:layout_marginTop="32dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Simple Rade Keyboard"
+                android:text="@string/welcome_title"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textAlignment="center"
@@ -41,7 +84,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="This is a passion project of mine to make \na keyboard for the Rade language with \ntone marks and smart typing features"
+                android:text="@string/welcome_description"
                 android:textSize="16sp"
                 android:textAlignment="center"
                 android:textColor="@android:color/darker_gray"
@@ -52,7 +95,7 @@
                 android:id="@+id/next_button"
                 android:layout_width="200dp"
                 android:layout_height="wrap_content"
-                android:text="Get Started"
+                android:text="@string/get_started"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/rounded_button"
@@ -74,14 +117,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Step 1 of 3"
+                android:text="@string/step_1_of_3"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Enable Rade Keyboard"
+                android:text="@string/step1_title"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp" />
@@ -114,7 +157,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="This will open Android's keyboard settings.\n\n📱 Look for 'Rade Keyboard' in the list\n✅ Turn it ON\n↩️ Come back to this app"
+                android:text="@string/step1_description"
                 android:textSize="16sp"
                 android:lineSpacingExtra="4dp"
                 android:layout_marginTop="24dp" />
@@ -123,7 +166,7 @@
                 android:id="@+id/enable_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Enable Keyboard"
+                android:text="@string/enable_keyboard"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/rounded_button"
@@ -145,14 +188,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Step 2 of 3"
+                android:text="@string/step_2_of_3"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select Rade Keyboard"
+                android:text="@string/step2_title"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp" />
@@ -185,7 +228,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Now make Rade Keyboard your active keyboard.\n\n📱 Choose 'Rade Keyboard' from the keyboard picker\n⌨️ Or long-press the space bar to switch\n🔄 You can also pull down notifications and tap the keyboard icon"
+                android:text="@string/step2_description"
                 android:textSize="16sp"
                 android:lineSpacingExtra="4dp"
                 android:layout_marginTop="24dp" />
@@ -194,7 +237,7 @@
                 android:id="@+id/select_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Open Keyboard Picker"
+                android:text="@string/open_keyboard_picker"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/rounded_button"
@@ -216,14 +259,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Step 3 of 3"
+                android:text="@string/step_3_of_3"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Test Your Keyboard"
+                android:text="@string/step3_title"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp" />
@@ -247,7 +290,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Ready to test!"
+                    android:text="✅ Ready to test!"
                     android:textSize="16sp"
                     android:layout_marginStart="8dp" />
 
@@ -256,7 +299,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🎉 Congratulations! You're ready to go!"
+                android:text="@string/congratulations"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/holo_green_dark"
@@ -267,16 +310,16 @@
                 android:layout_height="100dp"
                 android:background="@drawable/rounded_edittext"
                 android:gravity="top|start"
-                android:hint="Test your Rade keyboard here: áêíôúýăâêôơư"
+                android:hint="@string/test_hint"
                 android:inputType="textMultiLine"
                 android:padding="16dp"
-                android:textSize="16sp"
+                android:textSize="16dp"
                 android:layout_marginTop="16dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✨ Try typing vowels and long-pressing for tone marks!\n📝 Double-tap Shift for caps lock\n🔙 Hold delete key to delete whole words"
+                android:text="@string/test_tips"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray"
                 android:layout_marginTop="8dp"
