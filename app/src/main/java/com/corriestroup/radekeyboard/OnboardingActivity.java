@@ -183,7 +183,7 @@ public class OnboardingActivity extends AppCompatActivity {
         // Step 1: Enable keyboard
         if (setupChecker.isKeyboardEnabled()) {
             step1Check.setVisibility(View.VISIBLE);
-            step1Status.setText("✅ " + getString(R.string.completed)); // You'll need to add this string
+            step1Status.setText(getString(R.string.completed)); // You'll need to add this string
             step1Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
             // Auto-advance to step 2
             if (step1Screen.getVisibility() == View.VISIBLE) {
@@ -198,7 +198,7 @@ public class OnboardingActivity extends AppCompatActivity {
         // Step 2: Set as default
         if (setupChecker.isKeyboardDefault()) {
             step2Check.setVisibility(View.VISIBLE);
-            step2Status.setText("✅ " + getString(R.string.completed));
+            step2Status.setText(getString(R.string.completed));
             step2Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
             // Auto-advance to step 3
             if (step2Screen.getVisibility() == View.VISIBLE) {
@@ -217,7 +217,7 @@ public class OnboardingActivity extends AppCompatActivity {
         // Step 3: Test keyboard
         if (setupChecker.isKeyboardFullySetup()) {
             step3Check.setVisibility(View.VISIBLE);
-            step3Status.setText("✅ " + getString(R.string.step3_status_ready));
+            step3Status.setText(getString(R.string.step3_status_ready));
             step3Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
         } else {
             step3Check.setVisibility(View.GONE);
