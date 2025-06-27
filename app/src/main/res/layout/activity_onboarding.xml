@@ -148,7 +148,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⏳ Tap 'Enable Keyboard' below"
+                    android:text="@string/step1_status_pending"
                     android:textSize="16sp"
                     android:layout_marginStart="8dp" />
 
@@ -219,7 +219,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⏳ Tap 'Select Keyboard' below"
+                    android:text="@string/step2_status_pending"
                     android:textSize="16sp"
                     android:layout_marginStart="8dp" />
 
@@ -290,7 +290,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/Ready to test!"
+                    android:text="@string/step3_status_ready"
                     android:textSize="16sp"
                     android:layout_marginStart="8dp" />
 
@@ -349,7 +349,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="All Set!"
+                android:text="@string/all_set"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textAlignment="center"
@@ -358,7 +358,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Rade Keyboard is now ready to use.\nEnjoy typing in Vietnamese!"
+                android:text="@string/ready_message"
                 android:textSize="16sp"
                 android:textAlignment="center"
                 android:textColor="@android:color/darker_gray"
@@ -369,7 +369,7 @@
                 android:id="@+id/finish_button"
                 android:layout_width="200dp"
                 android:layout_height="wrap_content"
-                android:text="Start Typing!"
+                android:text="@string/start_typing"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/rounded_button"

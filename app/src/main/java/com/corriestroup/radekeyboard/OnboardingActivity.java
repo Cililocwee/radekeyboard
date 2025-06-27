@@ -38,6 +38,15 @@ public class OnboardingActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Apply saved language BEFORE setting content view, but don't recreate
+        String savedLanguage = getSavedLanguage();
+        Locale locale = new Locale(savedLanguage);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.setLocale(locale);
+        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
+
         setContentView(R.layout.activity_onboarding);
 
         setupChecker = new KeyboardSetupChecker(this);
@@ -109,8 +118,8 @@ public class OnboardingActivity extends AppCompatActivity {
         langVietnamese = findViewById(R.id.lang_vietnamese);
 
         // Restore the saved language state
-        String savedLanguage = getSavedLanguage();
-        updateLanguageButtonStates(savedLanguage);
+        String currentLanguage = getSavedLanguage();
+        updateLanguageButtonStates(currentLanguage);
 
 
         // Status indicators
@@ -174,51 +183,48 @@ public class OnboardingActivity extends AppCompatActivity {
         // Step 1: Enable keyboard
         if (setupChecker.isKeyboardEnabled()) {
             step1Check.setVisibility(View.VISIBLE);
-            step1Status.setText("✅ Completed");
+            step1Status.setText("✅ " + getString(R.string.completed)); // You'll need to add this string
             step1Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-
             // Auto-advance to step 2
             if (step1Screen.getVisibility() == View.VISIBLE) {
                 showStep2();
             }
         } else {
             step1Check.setVisibility(View.GONE);
-            step1Status.setText("⏳ Tap 'Enable Keyboard' below");
+            step1Status.setText(getString(R.string.step1_status_pending));
             step1Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
         }
 
         // Step 2: Set as default
         if (setupChecker.isKeyboardDefault()) {
             step2Check.setVisibility(View.VISIBLE);
-            step2Status.setText("✅ Completed");
+            step2Status.setText("✅ " + getString(R.string.completed));
             step2Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-
             // Auto-advance to step 3
             if (step2Screen.getVisibility() == View.VISIBLE) {
                 showStep3();
             }
         } else if (setupChecker.isKeyboardEnabled()) {
             step2Check.setVisibility(View.GONE);
-            step2Status.setText("⏳ Tap 'Select Keyboard' below");
+            step2Status.setText(getString(R.string.step2_status_pending));
             step2Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
         } else {
             step2Check.setVisibility(View.GONE);
-            step2Status.setText("⏸️ Complete Step 1 first");
+            step2Status.setText(getString(R.string.step1_first)); // You'll need to add this string
             step2Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
         }
 
         // Step 3: Test keyboard
         if (setupChecker.isKeyboardFullySetup()) {
             step3Check.setVisibility(View.VISIBLE);
-            step3Status.setText("✅ Ready to test!");
+            step3Status.setText("✅ " + getString(R.string.step3_status_ready));
             step3Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
         } else {
             step3Check.setVisibility(View.GONE);
-            step3Status.setText("⏸️ Complete previous steps first");
+            step3Status.setText(getString(R.string.complete_previous_steps)); // You'll need to add this string
             step3Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
         }
     }
-
     private void openLanguageSettings() {
         try {
             Intent intent = new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS);
@@ -298,7 +304,7 @@ public class OnboardingActivity extends AppCompatActivity {
     // Get saved language preference
     private String getSavedLanguage() {
         return getSharedPreferences("app_prefs", MODE_PRIVATE)
-                .getString(PREF_LANGUAGE, "en"); // Default to English
+                .getString(PREF_LANGUAGE, "vi"); // Default language is Vietnamese
     }
 
 
