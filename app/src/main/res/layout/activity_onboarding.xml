@@ -32,7 +32,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Welcome to Rade Keyboard"
+                android:text="Simple Rade Keyboard"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textAlignment="center"
@@ -41,7 +41,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="A keyboard for the Rade language\nwith tone marks and smart typing features"
+                android:text="This is a passion project of mine to make \na keyboard for the Rade language with \ntone marks and smart typing features"
                 android:textSize="16sp"
                 android:textAlignment="center"
                 android:textColor="@android:color/darker_gray"
@@ -200,14 +200,6 @@
                 android:background="@drawable/rounded_button"
                 android:layout_marginTop="32dp" />
 
-            <Button
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Refresh Status"
-                android:textSize="14sp"
-                android:id="@+id/refresh_button"
-                android:layout_marginTop="8dp" />
-
         </LinearLayout>
 
         <!-- Step 3: Test -->
@@ -255,7 +247,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="✅ Ready to test!"
+                    android:text="Ready to test!"
                     android:textSize="16sp"
                     android:layout_marginStart="8dp" />
 
@@ -284,7 +276,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✨ Try typing vowels and long-pressing for tone marks!\n📝 Double-tap Shift for caps lock\n🔙 Swipe delete key to delete whole words"
+                android:text="✨ Try typing vowels and long-pressing for tone marks!\n📝 Double-tap Shift for caps lock\n🔙 Hold delete key to delete whole words"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray"
                 android:layout_marginTop="8dp"

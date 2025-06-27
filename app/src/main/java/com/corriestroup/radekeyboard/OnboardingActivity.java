@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -20,6 +22,8 @@ public class OnboardingActivity extends AppCompatActivity {
     private Button nextButton, enableButton, selectButton, finishButton;
     private ImageView step1Check, step2Check, step3Check;
     private TextView step1Status, step2Status, step3Status;
+    private Handler statusHandler;
+    private Runnable statusChecker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +33,23 @@ public class OnboardingActivity extends AppCompatActivity {
         setupChecker = new KeyboardSetupChecker(this);
         initViews();
         showWelcomeScreen();
+
+        // Set up automatic status checking
+        statusHandler = new Handler(Looper.getMainLooper());
+        statusChecker = new Runnable() {
+            @Override
+            public void run() {
+                updateStepStatuses();
+
+                // Auto-advance if steps are completed
+                if (setupChecker.isKeyboardFullySetup()) {
+                    showStep3();
+                } else {
+                    // Check again in 2 seconds
+                    statusHandler.postDelayed(this, 2000);
+                }
+            }
+        };
     }
 
     @Override
@@ -45,8 +66,18 @@ public class OnboardingActivity extends AppCompatActivity {
 
         // Auto-advance if steps are completed
         if (setupChecker.isKeyboardFullySetup()) {
-            showStep3(); // Go directly to testing, no complete screen
+            showStep3();
+        } else {
+            // Start automatic checking
+            statusHandler.postDelayed(statusChecker, 2000);
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Stop automatic checking when activity is paused
+        statusHandler.removeCallbacks(statusChecker);
     }
 
     private void initViews() {
@@ -76,13 +107,6 @@ public class OnboardingActivity extends AppCompatActivity {
         enableButton.setOnClickListener(v -> openLanguageSettings());
         selectButton.setOnClickListener(v -> openInputMethodSettings());
         finishButton.setOnClickListener(v -> finishOnboarding());
-
-        // Add refresh button for debugging
-        Button refreshButton = findViewById(R.id.refresh_button);
-        refreshButton.setOnClickListener(v -> {
-            updateStepStatuses();
-            Toast.makeText(this, "Status refreshed", Toast.LENGTH_SHORT).show();
-        });
     }
 
     private void showWelcomeScreen() {
