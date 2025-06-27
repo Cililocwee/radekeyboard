@@ -22,6 +22,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Add the new OnboardingActivity -->
+        <activity
+            android:exported="false"
+            android:name="com.corriestroup.radekeyboard.OnboardingActivity"
+            android:theme="@style/AppTheme" />
+
         <service
             android:name="com.corriestroup.radekeyboard.ModernInputMethodService"
             android:exported="true"

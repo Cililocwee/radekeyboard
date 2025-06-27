@@ -1,0 +1,205 @@
+package com.corriestroup.radekeyboard;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class OnboardingActivity extends AppCompatActivity {
+
+    private KeyboardSetupChecker setupChecker;
+    private LinearLayout welcomeScreen, step1Screen, step2Screen, step3Screen, completeScreen;
+    private Button nextButton, enableButton, selectButton, finishButton;
+    private ImageView step1Check, step2Check, step3Check;
+    private TextView step1Status, step2Status, step3Status;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_onboarding);
+
+        setupChecker = new KeyboardSetupChecker(this);
+        initViews();
+        showWelcomeScreen();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Debug logging
+        android.util.Log.d("OnboardingActivity", "onResume called");
+        android.util.Log.d("OnboardingActivity", "Keyboard enabled: " + setupChecker.isKeyboardEnabled());
+        android.util.Log.d("OnboardingActivity", "Keyboard default: " + setupChecker.isKeyboardDefault());
+        android.util.Log.d("OnboardingActivity", "Fully setup: " + setupChecker.isKeyboardFullySetup());
+
+        updateStepStatuses();
+
+        // Auto-advance if steps are completed
+        if (setupChecker.isKeyboardFullySetup()) {
+            showStep3(); // Go directly to testing, no complete screen
+        }
+    }
+
+    private void initViews() {
+        // Screen containers
+        welcomeScreen = findViewById(R.id.welcome_screen);
+        step1Screen = findViewById(R.id.step1_screen);
+        step2Screen = findViewById(R.id.step2_screen);
+        step3Screen = findViewById(R.id.step3_screen);
+        completeScreen = findViewById(R.id.complete_screen);
+
+        // Buttons
+        nextButton = findViewById(R.id.next_button);
+        enableButton = findViewById(R.id.enable_button);
+        selectButton = findViewById(R.id.select_button);
+        finishButton = findViewById(R.id.finish_button);
+
+        // Status indicators
+        step1Check = findViewById(R.id.step1_check);
+        step2Check = findViewById(R.id.step2_check);
+        step3Check = findViewById(R.id.step3_check);
+        step1Status = findViewById(R.id.step1_status);
+        step2Status = findViewById(R.id.step2_status);
+        step3Status = findViewById(R.id.step3_status);
+
+        // Set click listeners
+        nextButton.setOnClickListener(v -> showStep1());
+        enableButton.setOnClickListener(v -> openLanguageSettings());
+        selectButton.setOnClickListener(v -> openInputMethodSettings());
+        finishButton.setOnClickListener(v -> finishOnboarding());
+
+        // Add refresh button for debugging
+        Button refreshButton = findViewById(R.id.refresh_button);
+        refreshButton.setOnClickListener(v -> {
+            updateStepStatuses();
+            Toast.makeText(this, "Status refreshed", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void showWelcomeScreen() {
+        hideAllScreens();
+        welcomeScreen.setVisibility(View.VISIBLE);
+    }
+
+    private void showStep1() {
+        hideAllScreens();
+        step1Screen.setVisibility(View.VISIBLE);
+        updateStepStatuses();
+    }
+
+    private void showStep2() {
+        hideAllScreens();
+        step2Screen.setVisibility(View.VISIBLE);
+        updateStepStatuses();
+    }
+
+    private void showStep3() {
+        hideAllScreens();
+        step3Screen.setVisibility(View.VISIBLE);
+        updateStepStatuses();
+    }
+
+    private void showCompleteScreen() {
+        hideAllScreens();
+        completeScreen.setVisibility(View.VISIBLE);
+    }
+
+    private void hideAllScreens() {
+        welcomeScreen.setVisibility(View.GONE);
+        step1Screen.setVisibility(View.GONE);
+        step2Screen.setVisibility(View.GONE);
+        step3Screen.setVisibility(View.GONE);
+        completeScreen.setVisibility(View.GONE);
+    }
+
+    private void updateStepStatuses() {
+        KeyboardSetupChecker.SetupStatus status = setupChecker.getSetupStatus();
+
+        // Step 1: Enable keyboard
+        if (setupChecker.isKeyboardEnabled()) {
+            step1Check.setVisibility(View.VISIBLE);
+            step1Status.setText("✅ Completed");
+            step1Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+
+            // Auto-advance to step 2
+            if (step1Screen.getVisibility() == View.VISIBLE) {
+                showStep2();
+            }
+        } else {
+            step1Check.setVisibility(View.GONE);
+            step1Status.setText("⏳ Tap 'Enable Keyboard' below");
+            step1Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        }
+
+        // Step 2: Set as default
+        if (setupChecker.isKeyboardDefault()) {
+            step2Check.setVisibility(View.VISIBLE);
+            step2Status.setText("✅ Completed");
+            step2Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+
+            // Auto-advance to step 3
+            if (step2Screen.getVisibility() == View.VISIBLE) {
+                showStep3();
+            }
+        } else if (setupChecker.isKeyboardEnabled()) {
+            step2Check.setVisibility(View.GONE);
+            step2Status.setText("⏳ Tap 'Select Keyboard' below");
+            step2Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        } else {
+            step2Check.setVisibility(View.GONE);
+            step2Status.setText("⏸️ Complete Step 1 first");
+            step2Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        }
+
+        // Step 3: Test keyboard
+        if (setupChecker.isKeyboardFullySetup()) {
+            step3Check.setVisibility(View.VISIBLE);
+            step3Status.setText("✅ Ready to test!");
+            step3Status.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+        } else {
+            step3Check.setVisibility(View.GONE);
+            step3Status.setText("⏸️ Complete previous steps first");
+            step3Status.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        }
+    }
+
+    private void openLanguageSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS);
+            startActivity(intent);
+        } catch (Exception e) {
+            // Fallback for older Android versions
+            try {
+                Intent intent = new Intent(Settings.ACTION_SETTINGS);
+                startActivity(intent);
+                Toast.makeText(this, "Go to Languages & Input → Virtual Keyboard", Toast.LENGTH_LONG).show();
+            } catch (Exception ex) {
+                Toast.makeText(this, "Please go to Settings → Languages & Input → Virtual Keyboard", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void openInputMethodSettings() {
+        try {
+            // Try to open the keyboard switcher directly
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showInputMethodPicker();
+        } catch (Exception e) {
+            // Fallback: Show instructions for manual switching
+            Toast.makeText(this, "Long-press the space bar or notification area to switch keyboards", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void finishOnboarding() {
+        finish(); // Return to MainActivity
+    }
+}
