@@ -223,10 +223,22 @@ public class ModernInputMethodService extends InputMethodService {
 
         switch (specialKey) {
             case ModernKeyboardView.KEY_DELETE:
-                ic.deleteSurroundingText(1, 0);
+                CharSequence selectedText = ic.getSelectedText(0);
+                if (selectedText != null && selectedText.length() > 0) {
+                    // Delete selection
+                    ic.commitText("", 1);
+                } else {
+                    // Regular character deletion
+                    ic.deleteSurroundingText(1, 0);
+                }
                 break;
 
             case ModernKeyboardView.KEY_DELETE_WORD:  // <- Add this new case
+                deleteLastWord();
+                break;
+
+            case ModernKeyboardView.KEY_DELETE_CONTINUOUS:
+                // Continuous word deletion
                 deleteLastWord();
                 break;
 

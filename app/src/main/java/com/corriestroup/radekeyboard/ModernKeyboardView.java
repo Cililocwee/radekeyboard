@@ -36,6 +36,9 @@ public class ModernKeyboardView extends View {
     public static final int KEY_NUMBERS = -6;
     public static final int KEY_DELETE_WORD = -7;
 
+    public static final int KEY_DELETE_SELECTION = -8;
+    public static final int KEY_DELETE_CONTINUOUS = -9;
+
 
     // Keyboard layouts
     private static final String[][] QWERTY_LAYOUT = {{"1","2","3","4","5","6","7","8","9","0"},
@@ -86,7 +89,7 @@ public class ModernKeyboardView extends View {
         RADE_ALTS.put("c", new String[]{"\""});
         RADE_ALTS.put("v", new String[]{"'"});
         RADE_ALTS.put("b", new String[]{":"});
-        RADE_ALTS.put("n", new String[]{";"});
+        RADE_ALTS.put("n", new String[]{";","ñ"});
         RADE_ALTS.put("m", new String[]{"/"});
 
         // Long-press alternatives for bottom row
@@ -164,7 +167,7 @@ public class ModernKeyboardView extends View {
     private float pressScale = 1.0f;
 
     // Vibration
-    private boolean vibrationEnabled = true;
+    private boolean vibrationEnabled = false;
 
     // Dimensions
     private float keyHeight;
@@ -178,10 +181,18 @@ public class ModernKeyboardView extends View {
     private int onPrimaryColor = Color.parseColor("#e7e7e7");       // Text on Accent
     private int surfaceVariantColor = Color.parseColor("#e7e7e7");  //  Keys
 
+    // Add these fields with your other private fields
+    private Handler deleteHandler = new Handler();
+    private Runnable continuousDeleteRunnable;
+    private boolean isContinuousDeleting = false;
+    private static final int CONTINUOUS_DELETE_DELAY = 300; // Time between word deletions
+    private static final int CONTINUOUS_DELETE_START_DELAY = 1500; // 2 seconds to start continuous mode
+
 
     public interface OnKeyPressListener {
         void onKeyPressed(String key, int keyCode);
         void onSpecialKeyPressed(int specialKey);
+
     }
 
     public ModernKeyboardView(Context context) {
@@ -357,12 +368,19 @@ public class ModernKeyboardView extends View {
         float offsetX = (key.width - scaledWidth) / 2;
         float offsetY = (key.height - scaledHeight) / 2;
 
-        RectF keyRect = new RectF(
-                key.x + offsetX,
-                key.y + offsetY,
-                key.x + scaledWidth,
-                key.y + scaledHeight
-        );
+        RectF keyRect;
+        if (key == pressedKey) {
+            // For pressed keys, fill the entire key area without any padding
+            keyRect = new RectF(key.x, key.y, key.x + key.width, key.y + key.height);
+        } else {
+            // For normal keys, apply the scaled dimensions (which creates the visual padding)
+            keyRect = new RectF(
+                    key.x + offsetX,
+                    key.y + offsetY,
+                    key.x + scaledWidth,
+                    key.y + scaledHeight
+            );
+        }
 
         // Draw key background with rounded corners
         keyPaint.setColor(keyColor);
@@ -377,6 +395,14 @@ public class ModernKeyboardView extends View {
             String displayText = getDisplayText(key.label);
             float centerX = key.x + key.width / 2;
 
+            // Save original text size
+            float originalTextSize = textPaint.getTextSize();
+
+            // Set larger text size for specific keys
+            if (key.label.equals(".") || key.label.equals(",")) { // Replace with your desired keys
+                textPaint.setTextSize(originalTextSize * 1.5f); // 30% larger
+            }
+
             if (isSymbolMode) {
                 // In symbol mode, center the text perfectly
                 float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 2;
@@ -386,6 +412,7 @@ public class ModernKeyboardView extends View {
                 float mainTextY = key.y + key.height / 2 + textPaint.getTextSize() / 2 + 8;
                 canvas.drawText(displayText, centerX, mainTextY, textPaint);
 
+                // Draw alternative character preview (smaller, less opaque)
                 // Draw alternative character preview (smaller, less opaque)
                 String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
                 Integer previewCount = ALT_PREVIEW_COUNT.get(key.label.toLowerCase());
@@ -402,16 +429,30 @@ public class ModernKeyboardView extends View {
                     // Calculate how many alternatives to show (don't exceed available alternatives)
                     int numToShow = Math.min(previewCount, alternatives.length);
 
+                    // Adjust positioning for keys with larger fonts
+                    boolean isLargerFontKey = key.label.equals(".") || key.label.equals(",");
+                    float altTextOffset = isLargerFontKey ? originalSize * 0.3f : originalSize * 0.6f; // More offset for larger font keys
+
                     if (numToShow == 1) {
                         // Single alternative - center it above main text
-                        float altY = key.y + key.height / 2 - originalSize * 0.6f;
+                        float altY = key.y + key.height / 2 - altTextOffset;
                         canvas.drawText(alternatives[0], centerX, altY, textPaint);
                     } else {
                         // Multiple alternatives - spread them horizontally
-                        float totalWidth = key.width * 0.4f; // Use 80% of key width
+                        float totalWidth, startX;
+
+                        if (isLargerFontKey) {
+                            // Extra spacing for comma and period keys
+                            totalWidth = key.width * 0.6f; // More spread for these keys
+                            startX = key.x + key.width * 0.2f; // Adjusted start position
+                        } else {
+                            // Normal spacing for other keys
+                            totalWidth = key.width * 0.4f;
+                            startX = key.x + key.width * 0.3f;
+                        }
+
                         float spacing = totalWidth / (numToShow + 1); // Evenly space them
-                        float startX = key.x + key.width * 0.3f; // Start at 10% from left edge
-                        float altY = key.y + key.height / 2 - originalSize * 0.6f;
+                        float altY = key.y + key.height / 2 - altTextOffset;
 
                         for (int i = 0; i < numToShow; i++) {
                             float altX = startX + spacing * (i + 1);
@@ -423,6 +464,9 @@ public class ModernKeyboardView extends View {
                     textPaint.setTextSize(originalSize);
                     textPaint.setColor(originalColor);
                 }
+
+// Restore original text size
+                textPaint.setTextSize(originalTextSize);
             }
         }
     }
@@ -509,6 +553,7 @@ public class ModernKeyboardView extends View {
 
             case MotionEvent.ACTION_UP:
                 cancelLongPressTimer(); // Add this line
+                stopContinuousDelete(); // Add this line
 
                 if (isLongPressing) {
                     handleAlternativeCommit();
@@ -522,6 +567,8 @@ public class ModernKeyboardView extends View {
                     pressedKey = null;
                 }
                 isLongPressing = false;
+                isContinuousDeleting = false; // Add this line
+
                 selectedAltIndex = -1;
                 hideLongPressPopup();
                 invalidate();
@@ -529,11 +576,15 @@ public class ModernKeyboardView extends View {
 
             case MotionEvent.ACTION_CANCEL:
                 cancelLongPressTimer();
+                stopContinuousDelete(); // Add this line
+
                 if (pressedKey != null) {
                     animateKeyPress(false);
                     pressedKey = null;
                 }
                 isLongPressing = false;
+                isContinuousDeleting = false; // Add this line
+
                 selectedAltIndex = -1;
                 hideLongPressPopup();
                 invalidate();
@@ -646,21 +697,30 @@ public class ModernKeyboardView extends View {
         }
     }
     private void startLongPressTimer(Key key) {
-        // Special handling for DELETE key - always start timer
+        // Special handling for DELETE key
         if (key.label.equals("DELETE")) {
             longPressedKey = key;
             longPressRunnable = new Runnable() {
                 @Override
                 public void run() {
                     isLongPressing = true;
+                    // First long press deletes a word
                     keyPressListener.onSpecialKeyPressed(KEY_DELETE_WORD);
+
+                    // Start continuous deletion after additional delay
+                    deleteHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            startContinuousDelete();
+                        }
+                    }, CONTINUOUS_DELETE_START_DELAY - LONG_PRESS_DELAY);
                 }
             };
-            longPressHandler.postDelayed(longPressRunnable, 400);
+            longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
             return;
         }
 
-        // Only start timer for keys with alternatives
+        // Rest of your existing long press logic for other keys...
         if (!RADE_ALTS.containsKey(key.label.toLowerCase())) {
             return;
         }
@@ -675,12 +735,12 @@ public class ModernKeyboardView extends View {
         };
         longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
     }
-
     private void cancelLongPressTimer() {
         if (longPressRunnable != null) {
             longPressHandler.removeCallbacks(longPressRunnable);
             longPressRunnable = null;
         }
+        stopContinuousDelete(); // Add this line
         hideLongPressPopup();
     }
 
@@ -721,22 +781,22 @@ public class ModernKeyboardView extends View {
         android.widget.LinearLayout popupLayout = new android.widget.LinearLayout(getContext());
         popupLayout.setOrientation(android.widget.LinearLayout.HORIZONTAL);
         popupLayout.setBackgroundColor(surfaceColor);
-        popupLayout.setPadding(16, 12, 16, 12);
+        popupLayout.setPadding(24, 18, 24, 18); // Increased from (16, 12, 16, 12)
 
         // Add border and rounded corners
         android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
         background.setColor(surfaceColor);
-        background.setCornerRadius(12);
-        background.setStroke(2, primaryColor);
+        background.setCornerRadius(16); // Increased from 12
+        background.setStroke(3, primaryColor); // Increased from 2
         popupLayout.setBackground(background);
 
         // Add shadow/elevation effect
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            popupLayout.setElevation(16);
+            popupLayout.setElevation(20); // Increased from 16
         }
 
         // Calculate standard key width
-        float standardKeyWidth = key.width;
+        float standardKeyWidth = key.width * 1.2f; // Increased by 20%
 
         // Create buttons for each alternative
         for (int i = 0; i < alternatives.length; i++) {
@@ -751,7 +811,7 @@ public class ModernKeyboardView extends View {
             android.widget.Button altButton = new android.widget.Button(getContext());
             altButton.setText(displayText);
             altButton.setTextColor(onSurfaceColor);
-            altButton.setTextSize(18);
+            altButton.setTextSize(22); // Increased from 18
 
             // Create button background
             android.graphics.drawable.GradientDrawable buttonBg = new android.graphics.drawable.GradientDrawable();
@@ -759,7 +819,7 @@ public class ModernKeyboardView extends View {
             buttonBg.setCornerRadius(8);
             altButton.setBackground(buttonBg);
 
-            altButton.setPadding(12, 12, 12, 12);
+            altButton.setPadding(16, 16, 16, 16); // Increased from (12, 12, 12, 12)
             altButton.setMinWidth(0);
             altButton.setMinimumWidth(0);
 
@@ -769,7 +829,7 @@ public class ModernKeyboardView extends View {
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
             );
             if (i > 0) {
-                params.leftMargin = 8;
+                params.leftMargin = 12; // Increased from 8
             }
             altButton.setLayoutParams(params);
 
@@ -803,7 +863,6 @@ public class ModernKeyboardView extends View {
         // Keep popup on screen
         if (popupX < 10) popupX = 10;
         if (popupX + popupWidth > getWidth() - 10) popupX = getWidth() - popupWidth - 10;
-        if (popupY < 10) popupY = (int)(key.y + key.height + 20);
 
         longPressPopup.showAtLocation(this, android.view.Gravity.NO_GRAVITY, popupX, popupY);
     }
@@ -917,6 +976,32 @@ public class ModernKeyboardView extends View {
             this.y = y;
             this.width = width;
             this.height = height;
+        }
+    }
+
+    private void startContinuousDelete() {
+        if (!isLongPressing || longPressedKey == null || !longPressedKey.label.equals("DELETE")) {
+            return;
+        }
+
+        isContinuousDeleting = true;
+        continuousDeleteRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isContinuousDeleting && isLongPressing) {
+                    keyPressListener.onSpecialKeyPressed(KEY_DELETE_CONTINUOUS);
+                    deleteHandler.postDelayed(this, CONTINUOUS_DELETE_DELAY);
+                }
+            }
+        };
+        deleteHandler.post(continuousDeleteRunnable);
+    }
+
+    private void stopContinuousDelete() {
+        isContinuousDeleting = false;
+        if (continuousDeleteRunnable != null) {
+            deleteHandler.removeCallbacks(continuousDeleteRunnable);
+            continuousDeleteRunnable = null;
         }
     }
 }
