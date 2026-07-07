@@ -44,9 +44,16 @@ final class SuggestionEngine {
             boolean exactPrefix = typedHasMarks && c.word.startsWith(typedNfc);
             scored.add(new ScoredWord(c.word, c.frequency, exactPrefix));
         }
-        scored.sort(Comparator
-                .comparing((ScoredWord s) -> !s.exactPrefix)
-                .thenComparing(s -> -s.frequency));
+        // Collections.sort + explicit Comparator: Comparator.comparing needs API 24 (minSdk 21).
+        Collections.sort(scored, new Comparator<ScoredWord>() {
+            @Override
+            public int compare(ScoredWord a, ScoredWord b) {
+                if (a.exactPrefix != b.exactPrefix) {
+                    return a.exactPrefix ? -1 : 1;
+                }
+                return b.frequency - a.frequency;
+            }
+        });
 
         List<String> out = new ArrayList<>(Math.min(max, scored.size()));
         for (int i = 0; i < scored.size() && out.size() < max; i++) {

@@ -58,7 +58,13 @@ final class WordDictionary {
             entries[i][1] = word;
             entries[i][2] = rows.get(i)[1];
         }
-        Arrays.sort(entries, Comparator.comparing(e -> e[0]));
+        // Explicit Comparator: Comparator.comparing needs API 24 (minSdk 21).
+        Arrays.sort(entries, new Comparator<String[]>() {
+            @Override
+            public int compare(String[] a, String[] b) {
+                return a[0].compareTo(b[0]);
+            }
+        });
 
         String[] keys = new String[n];
         String[] words = new String[n];
