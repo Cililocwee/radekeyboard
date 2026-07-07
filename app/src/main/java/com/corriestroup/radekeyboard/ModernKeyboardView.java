@@ -1,6 +1,5 @@
 package com.corriestroup.radekeyboard;
 
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
@@ -11,12 +10,15 @@ import android.graphics.RectF;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Handler;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.DecelerateInterpolator;
+import android.view.ViewConfiguration;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
@@ -146,13 +148,21 @@ public class ModernKeyboardView extends View {
     private Runnable longPressRunnable;
     private PopupWindow longPressPopup;
     private boolean isLongPressing = false;
-    private static final int LONG_PRESS_DELAY = 200; // Reduced from 500ms to 200ms
+    // 300ms matches mainstream keyboards; 200ms triggered accidental popups for fast typists.
+    private static final int LONG_PRESS_DELAY = 300;
     private List<android.widget.Button> altButtons = new ArrayList<>();
     private int selectedAltIndex = -1; // Track which alternative is currently selected
 
-    // Animation
-    private ValueAnimator pressAnimator;
-    private float pressScale = 1.0f;
+    // Multi-touch: only one pointer drives a press at a time; a second finger going
+    // down commits the first key immediately (fast two-thumb typing).
+    private int activePointerId = MotionEvent.INVALID_POINTER_ID;
+    private float downX, downY;
+    private int touchSlop;
+
+    // Haptics (opt-in via settings; fields cached so no prefs read per keystroke)
+    private Vibrator vibrator;
+    private boolean hapticsEnabled = false;
+    private int hapticDurationMs = 20;
 
     // Dimensions
     private float keyHeight;
@@ -199,6 +209,22 @@ public class ModernKeyboardView extends View {
         calculateDimensions();
         createKeys();
         setBackgroundColor(surfaceColor);
+        touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+        vibrator = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+    }
+
+    /**
+     * Key-down feedback. No-op unless enabled in settings; reads only cached fields
+     * so it stays off the SharedPreferences path per keystroke.
+     */
+    private void performKeyHaptic() {
+        if (!hapticsEnabled || vibrator == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(
+                    hapticDurationMs, VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+            vibrator.vibrate(hapticDurationMs);
+        }
     }
 
     /**
@@ -439,26 +465,9 @@ public class ModernKeyboardView extends View {
         }
 
 
-        // Apply press animation
-        float scale = (key == pressedKey) ? pressScale : 1.0f;
-        float scaledWidth = key.width * scale;
-        float scaledHeight = key.height * scale;
-        float offsetX = (key.width - scaledWidth) / 2;
-        float offsetY = (key.height - scaledHeight) / 2;
-
-        RectF keyRect;
-        if (key == pressedKey) {
-            // For pressed keys, fill the entire key area without any padding
-            keyRect = new RectF(key.x, key.y, key.x + key.width, key.y + key.height);
-        } else {
-            // For normal keys, apply the scaled dimensions (which creates the visual padding)
-            keyRect = new RectF(
-                    key.x + offsetX,
-                    key.y + offsetY,
-                    key.x + scaledWidth,
-                    key.y + scaledHeight
-            );
-        }
+        // Pressed feedback is an instant color change (see keyColor above) — the old
+        // scale animator shared one scale across keys and glitched under multi-touch.
+        RectF keyRect = new RectF(key.x, key.y, key.x + key.width, key.y + key.height);
 
         // Draw key background with rounded corners
         keyPaint.setColor(keyColor);
@@ -602,76 +611,124 @@ public class ModernKeyboardView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        float x = event.getX();
-        float y = event.getY();
-
-        switch (event.getAction()) {
+        switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                Key touchedKey = findKeyAt(x, y);
-                if (touchedKey != null) {
-                    pressedKey = touchedKey;
-                    animateKeyPress(true);
-                    invalidate();
-                    startLongPressTimer(touchedKey);
-                }
+                beginPress(event.getPointerId(0), event.getX(), event.getY());
                 return true;
 
-            case MotionEvent.ACTION_MOVE:
+            case MotionEvent.ACTION_POINTER_DOWN: {
+                // A second finger going down while the first still rests is how fast
+                // two-thumb typing looks: commit the current key immediately, then the
+                // new pointer takes over.
+                if (isLongPressing) {
+                    cancelLongPressTimer();
+                    handleAlternativeCommit();
+                    resetInteractionState();
+                } else if (pressedKey != null) {
+                    cancelLongPressTimer();
+                    handleKeyPress(pressedKey);
+                    pressedKey = null;
+                }
+                int downIndex = event.getActionIndex();
+                beginPress(event.getPointerId(downIndex),
+                        event.getX(downIndex), event.getY(downIndex));
+                return true;
+            }
+
+            case MotionEvent.ACTION_MOVE: {
+                int moveIndex = event.findPointerIndex(activePointerId);
+                if (moveIndex < 0) return true;
+                float x = event.getX(moveIndex);
+                float y = event.getY(moveIndex);
+
                 if (isLongPressing) {
                     handleAlternativeSelection(x, y);
                     return true;
-                } else if (pressedKey != null) {
+                }
+                if (pressedKey != null) {
+                    // A wobble within touch slop must not drop or move the press.
+                    float dx = x - downX;
+                    float dy = y - downY;
+                    if (dx * dx + dy * dy <= (float) touchSlop * touchSlop) {
+                        return true;
+                    }
                     Key currentKey = findKeyAt(x, y);
-                    if (currentKey != pressedKey) {
+                    if (currentKey != null && currentKey != pressedKey) {
+                        // Slide the press to the neighbor instead of cancelling —
+                        // the commit on UP uses wherever the finger ended.
                         cancelLongPressTimer();
-                        animateKeyPress(false);
-                        pressedKey = null;
+                        pressedKey = currentKey;
+                        downX = x;
+                        downY = y;
+                        startLongPressTimer(currentKey);
                         invalidate();
                     }
                 }
                 return true;
+            }
+
+            case MotionEvent.ACTION_POINTER_UP: {
+                int upIndex = event.getActionIndex();
+                if (event.getPointerId(upIndex) == activePointerId) {
+                    commitActivePress();
+                    // Don't retro-press a finger that was merely resting: further
+                    // moves are ignored until the next pointer-down.
+                    activePointerId = MotionEvent.INVALID_POINTER_ID;
+                }
+                return true;
+            }
 
             case MotionEvent.ACTION_UP:
-                cancelLongPressTimer(); // Add this line
-                stopContinuousDelete(); // Add this line
-
-                if (isLongPressing) {
-                    handleAlternativeCommit();
-                } else if (pressedKey != null) {
-                    handleKeyPress(pressedKey);
-                }
-
-                // Reset all state
-                if (pressedKey != null) {
-                    animateKeyPress(false);
-                    pressedKey = null;
-                }
-                isLongPressing = false;
-                isContinuousDeleting = false; // Add this line
-
-                selectedAltIndex = -1;
-                hideLongPressPopup();
-                invalidate();
+                commitActivePress();
+                activePointerId = MotionEvent.INVALID_POINTER_ID;
                 return true;
 
             case MotionEvent.ACTION_CANCEL:
                 cancelLongPressTimer();
-                stopContinuousDelete(); // Add this line
-
-                if (pressedKey != null) {
-                    animateKeyPress(false);
-                    pressedKey = null;
-                }
-                isLongPressing = false;
-                isContinuousDeleting = false; // Add this line
-
-                selectedAltIndex = -1;
-                hideLongPressPopup();
-                invalidate();
+                stopContinuousDelete();
+                resetInteractionState();
+                activePointerId = MotionEvent.INVALID_POINTER_ID;
                 return true;
         }
 
         return true;
+    }
+
+    /** Start tracking {@code pointerId} and press the key under it. */
+    private void beginPress(int pointerId, float x, float y) {
+        activePointerId = pointerId;
+        downX = x;
+        downY = y;
+        Key touchedKey = findKeyAt(x, y);
+        if (touchedKey != null) {
+            pressedKey = touchedKey;
+            performKeyHaptic();
+            invalidate();
+            startLongPressTimer(touchedKey);
+        } else {
+            pressedKey = null;
+        }
+    }
+
+    /** Commit whatever the active pointer was doing (tap or popup selection), then reset. */
+    private void commitActivePress() {
+        cancelLongPressTimer();
+        stopContinuousDelete();
+        if (isLongPressing) {
+            handleAlternativeCommit();
+        } else if (pressedKey != null) {
+            handleKeyPress(pressedKey);
+        }
+        resetInteractionState();
+    }
+
+    private void resetInteractionState() {
+        pressedKey = null;
+        isLongPressing = false;
+        isContinuousDeleting = false;
+        selectedAltIndex = -1;
+        hideLongPressPopup();
+        invalidate();
     }
 
     private void handleAlternativeSelection(float x, float y) {
@@ -784,6 +841,7 @@ public class ModernKeyboardView extends View {
                 @Override
                 public void run() {
                     isLongPressing = true;
+                    performKeyHaptic();
                     // First long press deletes a word
                     keyPressListener.onSpecialKeyPressed(KEY_DELETE_WORD);
 
@@ -810,6 +868,7 @@ public class ModernKeyboardView extends View {
             @Override
             public void run() {
                 isLongPressing = true;
+                performKeyHaptic();
                 showLongPressPopup(key);
             }
         };
@@ -937,29 +996,19 @@ public class ModernKeyboardView extends View {
     }
 
     private Key findKeyAt(float x, float y) {
+        // Nearest key by clamped distance: an exact hit has distance 0, and the
+        // margins between keys stop being dead zones that drop fast taps.
+        Key best = null;
+        float bestDistance = Float.MAX_VALUE;
         for (Key key : keys) {
-            if (x >= key.x && x <= key.x + key.width &&
-                    y >= key.y && y <= key.y + key.height) {
-                return key;
+            float d = KeyGeometry.distanceSquaredToRect(x, y,
+                    key.x, key.y, key.x + key.width, key.y + key.height);
+            if (d < bestDistance) {
+                bestDistance = d;
+                best = key;
             }
         }
-        return null;
-    }
-
-    private void animateKeyPress(boolean pressed) {
-        if (pressAnimator != null) {
-            pressAnimator.cancel();
-        }
-
-        float targetScale = pressed ? 0.95f : 1.0f;
-        pressAnimator = ValueAnimator.ofFloat(pressScale, targetScale);
-        pressAnimator.setDuration(100);
-        pressAnimator.setInterpolator(new DecelerateInterpolator());
-        pressAnimator.addUpdateListener(animation -> {
-            pressScale = (float) animation.getAnimatedValue();
-            invalidate();
-        });
-        pressAnimator.start();
+        return best;
     }
 
     private void handleKeyPress(Key key) {
