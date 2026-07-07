@@ -52,30 +52,39 @@ WARNING and lists anyway. That does NOT mean the keystore is passwordless. *Sign
 (the release build) requires the correct password even though *listing* did not. Do not
 assume "it listed fine" == "no password".
 
+> 🔒 **The password is 100% the user's job — never automate it.** The agent must NOT
+> enter, read, type, guess, echo, or brute-force the keystore password; must NOT pass
+> `-storepass`/`-keypass`; and must NOT run any signed build (`bundleRelease` /
+> `assembleRelease`) that consumes it. The agent's role is only to (a) do the non-secret
+> Gradle wiring if asked, and (b) walk the user through the password steps. The user
+> types the password into `keystore.properties` themselves and runs the signed build
+> themselves.
+
 First **detect state**: look for a `signingConfigs` block in `app/build.gradle` and a
 `keystore.properties` file at the repo root. Confirm `keystore.properties`, `*.jks`,
 `*.keystore` are gitignored.
 
 - **If signing is already wired up:** say so (✅) and skip to Phase 3.
 - **If it's not wired up yet** (the current state): walk the user through reusing the
-  existing key. The agent must NOT run keytool or handle passwords.
+  existing key.
 
   **2a. Confirm the keystore is present.** Check that
   `~/Desktop/Important Documents/radekeyboard-keystore` exists (agent can `ls` it). If it
   has moved, search for it: `find "$HOME" -iname "radekeyboard-keystore*"`. If it truly
   can't be found anywhere, jump to **2d (lost key)**.
 
-  **2b. User verifies the passwords** (only they have these). Have them run:
-  ```bash
-  keytool -list -v -keystore ~/Desktop/Important\ Documents/radekeyboard-keystore
-  ```
-  It prompts for the **keystore password**; success + a listed `radekeyboard-key` alias
-  confirms both the file and the store password. (If the key has a separate password,
-  they'll need that too for the build.)
+  **2b. Recover the password (user only).** The keystore is password-protected (PKCS12,
+  so store password == key password — one value). Tell the user where to find it:
+  their password manager, or Android Studio's **Generate Signed Bundle / APK** dialog if
+  "Remember passwords" was ticked, or the macOS Keychain. Note the listing trap above:
+  `keytool -list` succeeding is NOT proof of the password. The agent does not verify or
+  handle it — the real proof is a signed build succeeding (step 4, run by the user).
 
-  **2c. Agent wires Gradle to the existing key.** The agent will:
+  **2c. Agent does the non-secret Gradle wiring (offer; only if the user wants it).**
+  If the user asks, the agent may:
   - Write a gitignored `keystore.properties` at the repo root, pre-filled with the known
-    path + alias and `CHANGE_ME` password placeholders:
+    path + alias but with the password fields left as `CHANGE_ME` **for the user to fill
+    in themselves** — the agent never writes a real password:
     ```properties
     storeFile=/Users/<you>/Desktop/Important Documents/radekeyboard-keystore
     storePassword=CHANGE_ME
@@ -86,8 +95,9 @@ First **detect state**: look for a `signingConfigs` block in `app/build.gradle` 
     and wire `buildTypes.release.signingConfig` to it.
   - Verify `.gitignore` covers `keystore.properties`, `*.jks`, `*.keystore`.
 
-  Then tell the user: **open `keystore.properties` and replace both `CHANGE_ME` values
-  with the passwords from step 2b.** (The agent never sees these.)
+  Then hand off: **the user opens `keystore.properties` and replaces both `CHANGE_ME`
+  values with their one password** (same value in both fields for PKCS12). The agent
+  never sees or asks for it.
 
   **2d. Lost key fallback** (only if the keystore genuinely can't be found): if enrolled
   in Play App Signing, you can register a new upload key — Play Console → **Test and
@@ -104,13 +114,23 @@ First **detect state**: look for a `signingConfigs` block in `app/build.gradle` 
   that the keyboard enables, sets as default, types, tone marks + long-press work, and
   onboarding completes.
 
-### Phase 4 — Build the signed bundle (agent does this)
+### Phase 4 — Build the signed bundle (USER runs this — it consumes the password)
 
-- Run `make release` (`./gradlew bundleRelease`).
-- Report the output path: `app/build/outputs/bundle/release/app-release.aab`.
-- Confirm the build was **signed** (if Phase 2 was skipped because signing wasn't wired
-  up, STOP and tell the user the bundle is unsigned and will be rejected).
-- Remind: the `.aab` is a build artifact — never commit it.
+Because the signed build reads the keystore password, the **user** runs it, not the
+agent. Give them the command and what to expect:
+
+- Run: `make release`  (i.e. `./gradlew bundleRelease`).
+- Output: `app/build/outputs/bundle/release/app-release.aab`.
+- If it fails with `Keystore was tampered with, or password was incorrect` /
+  `Failed to read key ... from store`, the password in `keystore.properties` is wrong —
+  fix it and re-run. (This is the real password check; `keytool -list` was not.)
+- A successful `bundleRelease` = the password is correct and the bundle is signed.
+- If signing isn't wired up yet (Phase 2 not done), the build won't be signed and Play
+  will reject it — finish Phase 2 first.
+- Reminder: the `.aab` is a build artifact — never commit it.
+
+The agent may help read/interpret the build output, but must not run the signed build
+itself or supply the password.
 
 ### Phase 5 — Upload to Play Console (MANUAL — spell out every click)
 
@@ -156,8 +176,10 @@ Release readiness — Rade Keyboard
   ⬜ Play Console upload — manual (Phase 5)
 ```
 
-Then walk the user through whichever phase they're on. **Do** the mechanical steps they
-approve (version bump, writing `keystore.properties`/`signingConfigs` scaffolding,
-running build/test/lint, git tagging). **Never** run `keytool`, type or read signing
-passwords, or attempt the Play Console upload — for those, present the exact
-click/type/navigate steps and let the user act.
+Then walk the user through whichever phase they're on. **Do** the non-secret mechanical
+steps they approve: version bump, `signingConfigs` scaffolding, a `keystore.properties`
+template with `CHANGE_ME` password placeholders, `make test` / `make lint` / debug
+builds, and git tagging. **Never** run `keytool`, run the signed release build
+(`bundleRelease`/`assembleRelease`), type/read/guess the signing password, or attempt
+the Play Console upload — for all of those, present the exact click/type/navigate steps
+and let the user do them.
