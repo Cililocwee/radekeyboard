@@ -7,7 +7,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.RectF;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -15,12 +14,10 @@ import android.os.Handler;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.AttributeSet;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.PopupWindow;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,10 +52,6 @@ public class ModernKeyboardView extends View {
     private boolean isShiftPressed = false;
     private boolean isCapsLock = false;
     private boolean numberRowEnabled = true;
-
-    private boolean isNumberKey(String label) {
-        return label.matches("[0-9]"); // Returns true for digits 0-9
-    }
 
     // Long press functionality
     private Key longPressedKey;
@@ -293,12 +286,10 @@ public class ModernKeyboardView extends View {
             for (String keyLabel : rowKeys) {
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     totalWeight += 1.5f; // 1.5x width
-                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {
+                } else if (keyLabel.equals(" ")) {
                     totalWeight += 5.0f; // 5x width
                 } else if (keyLabel.equals("ENTER")) {
                     totalWeight += 1.5f;
-                } else if (keyLabel.equals("SYM")) {
-                    totalWeight += 1.0f;
                 } else {
                     totalWeight += 1.0f; // Standard key
                 }
@@ -314,7 +305,7 @@ public class ModernKeyboardView extends View {
                 // Set key widths based on type
                 if (keyLabel.equals("SHIFT") || keyLabel.equals("DELETE")) {
                     keyWidth = unitWidth * 1.5f;
-                } else if (keyLabel.equals("SPACE") || keyLabel.equals(" ")) {
+                } else if (keyLabel.equals(" ")) {
                     keyWidth = unitWidth * 5.0f;
                 } else if (keyLabel.equals("ENTER")) {
                     keyWidth = unitWidth * 1.5f;
@@ -601,9 +592,7 @@ public class ModernKeyboardView extends View {
 
     private String getDisplayText(String label) {
         switch (label) {
-            case "SPACE": return "space";
-            case "SYM": return isSymbolMode ? "ABC" : "123";
-            case "ABC": return "ABC";  // Add this line
+            case "ABC": return "ABC";
             default:
                 // Apply uppercase for letters when shift or caps lock is on
                 if ((isShiftPressed || isCapsLock) && label.length() == 1 && Character.isLetter(label.charAt(0))) {
@@ -1073,12 +1062,6 @@ public class ModernKeyboardView extends View {
                 break;
             case "ENTER":
                 keyPressListener.onSpecialKeyPressed(KEY_ENTER);
-                break;
-            case "SPACE":
-                keyPressListener.onSpecialKeyPressed(KEY_SPACE);
-                break;
-            case "SYM":
-                keyPressListener.onSpecialKeyPressed(KEY_SYMBOL);
                 break;
             case "123":
                 keyPressListener.onSpecialKeyPressed(KEY_NUMBERS);

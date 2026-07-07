@@ -33,9 +33,6 @@ public class SuggestionStripView extends LinearLayout {
         super(context);
         setOrientation(HORIZONTAL);
 
-        float density = getResources().getDisplayMetrics().density;
-        setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, (int) (HEIGHT_DP * density)));
-
         int nightMode = getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK;
         boolean isDark = nightMode == Configuration.UI_MODE_NIGHT_YES;
@@ -61,6 +58,11 @@ public class SuggestionStripView extends LinearLayout {
             slots[i] = slot;
             addView(slot);
         }
+    }
+
+    /** The strip's fixed height in pixels — the parent must size it with this. */
+    public int getFixedHeightPx() {
+        return (int) (HEIGHT_DP * getResources().getDisplayMetrics().density);
     }
 
     public void setOnSuggestionTapListener(OnSuggestionTapListener listener) {

@@ -77,7 +77,9 @@ public class ModernInputMethodService extends InputMethodService {
         // height never changes mid-session (the Samsung symbol-glitch invariant).
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.addView(suggestionStrip);
+        container.addView(suggestionStrip, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                suggestionStrip.getFixedHeightPx()));
         container.addView(keyboardView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));

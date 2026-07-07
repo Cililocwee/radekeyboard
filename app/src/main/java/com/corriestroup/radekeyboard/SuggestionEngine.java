@@ -3,7 +3,6 @@ package com.corriestroup.radekeyboard;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -37,29 +36,32 @@ final class SuggestionEngine {
         // should rank them (typing "da" must still put "đây" first).
         boolean typedHasMarks = !typedNfc.equals(folded);
 
+        // Bounded top-K selection: a 1-char prefix can match thousands of entries,
+        // and this runs per keystroke — never sort the whole match list.
         List<WordDictionary.Candidate> matches = dictionary.prefixMatches(folded);
-        List<ScoredWord> scored = new ArrayList<>(matches.size());
+        ScoredWord[] top = new ScoredWord[max];
         for (WordDictionary.Candidate c : matches) {
             if (c.word.equals(typedNfc)) continue;
             boolean exactPrefix = typedHasMarks && c.word.startsWith(typedNfc);
-            scored.add(new ScoredWord(c.word, c.frequency, exactPrefix));
+            insertRanked(top, new ScoredWord(c.word, c.frequency, exactPrefix));
         }
-        // Collections.sort + explicit Comparator: Comparator.comparing needs API 24 (minSdk 21).
-        Collections.sort(scored, new Comparator<ScoredWord>() {
-            @Override
-            public int compare(ScoredWord a, ScoredWord b) {
-                if (a.exactPrefix != b.exactPrefix) {
-                    return a.exactPrefix ? -1 : 1;
-                }
-                return b.frequency - a.frequency;
-            }
-        });
 
-        List<String> out = new ArrayList<>(Math.min(max, scored.size()));
-        for (int i = 0; i < scored.size() && out.size() < max; i++) {
-            out.add(scored.get(i).word);
+        List<String> out = new ArrayList<>(max);
+        for (ScoredWord s : top) {
+            if (s != null) out.add(s.word);
         }
         return out;
+    }
+
+    /** Insert into the fixed-size ranked array (best first), dropping the last. */
+    private static void insertRanked(ScoredWord[] top, ScoredWord candidate) {
+        for (int i = 0; i < top.length; i++) {
+            if (top[i] == null || candidate.ranksAbove(top[i])) {
+                System.arraycopy(top, i, top, i + 1, top.length - i - 1);
+                top[i] = candidate;
+                return;
+            }
+        }
     }
 
     private static final class ScoredWord {
@@ -71,6 +73,11 @@ final class SuggestionEngine {
             this.word = word;
             this.frequency = frequency;
             this.exactPrefix = exactPrefix;
+        }
+
+        boolean ranksAbove(ScoredWord other) {
+            if (exactPrefix != other.exactPrefix) return exactPrefix;
+            return frequency > other.frequency;
         }
     }
 }
