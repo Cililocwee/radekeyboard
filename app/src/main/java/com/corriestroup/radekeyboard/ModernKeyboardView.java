@@ -38,23 +38,10 @@ public class ModernKeyboardView extends View {
 
     public static final int KEY_DELETE_SELECTION = -8;
     public static final int KEY_DELETE_CONTINUOUS = -9;
+    public static final int KEY_SETTINGS = -10;
 
-
-    // Keyboard layouts
-    private static final String[][] QWERTY_LAYOUT = {{"1","2","3","4","5","6","7","8","9","0"},
-            {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
-            {"a", "s", "d", "f", "g", "h", "j", "k", "l"},
-            {"SHIFT", "z", "x", "c", "v", "b", "n", "m", "DELETE"},
-            {"123", ",", " ", ".", "ENTER"}
-    };
-
-    private static final String[][] SYMBOL_LAYOUT = {
-
-            {"[","]","{","}","<",">","^","÷"},
-            {"@", "#", "$", "&", "_", "-", "(", ")", "=", "%"},
-            {"~", "\"", "*", "'", ":", "/", "!", "?", "+", "DELETE"},
-            {"ABC", ",", " ", ".", "ENTER"}
-    };
+    // Layout rows live in KeyboardLayouts (pure, unit-tested); the view only picks
+    // which set to render based on symbol mode and the number-row setting.
 
     // Vietnamese/Rade diacritics map for long-press
     private static final Map<String, String[]> RADE_ALTS = new HashMap<>();
@@ -147,6 +134,7 @@ public class ModernKeyboardView extends View {
     private boolean isSymbolMode = false;
     private boolean isShiftPressed = false;
     private boolean isCapsLock = false;
+    private boolean numberRowEnabled = true;
 
     private boolean isNumberKey(String label) {
         return label.matches("[0-9]"); // Returns true for digits 0-9
@@ -170,6 +158,9 @@ public class ModernKeyboardView extends View {
     private float keyHeight;
     private float keyMargin;
     private int keyboardHeight;
+    // Bottom system inset (gesture nav area) on edge-to-edge devices; padding only,
+    // keys are laid out above it.
+    private int bottomInset = 0;
 
     // Colors (Material Design 3) — populated by applyThemeColors() based on night mode.
     private int surfaceColor;         // Background
@@ -259,14 +250,22 @@ public class ModernKeyboardView extends View {
         backgroundPaint.setColor(surfaceColor);
     }
 
+    private String[][] currentLayout() {
+        return isSymbolMode ? KeyboardLayouts.symbolRows()
+                : KeyboardLayouts.qwertyRows(numberRowEnabled);
+    }
+
     private void calculateDimensions() {
         float density = getResources().getDisplayMetrics().density;
         keyHeight = 48 * density; // 48dp
         keyMargin = 4 * density;  // 4dp
 
-        // Calculate keyboard height based on current layout
-        String[][] currentLayout = isSymbolMode ? SYMBOL_LAYOUT : QWERTY_LAYOUT;
-        int numberOfRows = currentLayout.length;
+        // The keyboard height is CONSTANT across QWERTY/symbol layouts — it is always
+        // derived from the QWERTY row count. Symbol rows stretch to fill the same
+        // total instead (see createKeys). A mid-session IME window resize on layout
+        // toggle is what glitched the symbols view on Samsung One UI; only the
+        // number-row setting (applied between sessions) may change the height.
+        int numberOfRows = KeyboardLayouts.heightRowCount(numberRowEnabled);
 
         // Reduce top margin to make keyboard shorter
         float topMargin = keyMargin * 0.2f; // Use half the normal margin for top
@@ -277,7 +276,7 @@ public class ModernKeyboardView extends View {
 
     private void createKeys() {
         keys.clear();
-        String[][] layout = isSymbolMode ? SYMBOL_LAYOUT : QWERTY_LAYOUT;
+        String[][] layout = currentLayout();
 
         float totalWidth = getWidth();
         if (totalWidth == 0) return; // View not measured yet
@@ -285,9 +284,14 @@ public class ModernKeyboardView extends View {
         float availableWidth = totalWidth - keyMargin * 2;
         float topMargin = keyMargin * 0.5f; // Use reduced top margin
 
+        // Stretch this layout's rows to fill the fixed keyboardHeight: with the
+        // 5-row QWERTY this equals keyHeight; the 4-row symbol layout gets taller keys.
+        int rowCount = layout.length;
+        float rowHeight = (keyboardHeight - topMargin - keyMargin * rowCount) / rowCount;
+
         for (int row = 0; row < layout.length; row++) {
             String[] rowKeys = layout[row];
-            float y = topMargin + row * (keyHeight + keyMargin); // Use reduced top margin
+            float y = topMargin + row * (rowHeight + keyMargin); // Use reduced top margin
 
             // Calculate total weight for this row
             float totalWeight = 0;
@@ -323,7 +327,7 @@ public class ModernKeyboardView extends View {
                     keyWidth = unitWidth;
                 }
 
-                Key key = new Key(keyLabel, currentX, y, keyWidth, keyHeight);
+                Key key = new Key(keyLabel, currentX, y, keyWidth, rowHeight);
                 keys.add(key);
 
                 currentX += keyWidth + keyMargin;
@@ -334,17 +338,57 @@ public class ModernKeyboardView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         createKeys();
+        invalidate();
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT_WATCH) {
+            requestApplyInsets();
+        }
+    }
+
+    @Override
+    public android.view.WindowInsets onApplyWindowInsets(android.view.WindowInsets insets) {
+        // targetSdk 35 renders edge-to-edge: pad the keyboard above the gesture-nav
+        // area so the bottom row isn't under it. Devices that already place the IME
+        // window above the nav bar report 0 here, making this a no-op.
+        int newInset;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            newInset = insets.getInsets(android.view.WindowInsets.Type.systemBars()
+                    | android.view.WindowInsets.Type.mandatorySystemGestures()).bottom;
+        } else {
+            newInset = insets.getSystemWindowInsetBottom();
+        }
+        if (newInset != bottomInset && newInset >= 0) {
+            bottomInset = newInset;
+            requestLayout();
+        }
+        return super.onApplyWindowInsets(insets);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        setMeasuredDimension(width, keyboardHeight);
+        // Honor an exact height if a parent imposes one; otherwise use our own.
+        if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
+            setMeasuredDimension(width, MeasureSpec.getSize(heightMeasureSpec));
+        } else {
+            setMeasuredDimension(width, keyboardHeight + bottomInset);
+        }
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        // Guard against a stale/empty key list (createKeys early-returns while the
+        // view is unmeasured; a layout toggle in that window would otherwise draw
+        // the wrong layout's keys — part of the Samsung symbol-view glitch).
+        if (keys.isEmpty() && getWidth() > 0) {
+            createKeys();
+        }
 
         // Draw background
         canvas.drawRect(0, 0, getWidth(), getHeight(), backgroundPaint);
@@ -365,6 +409,7 @@ public class ModernKeyboardView extends View {
                 key.label.equals("SHIFT") ||
                 key.label.equals("123") ||
                 key.label.equals("ABC") ||
+                key.label.equals("SETTINGS") ||
                 key.label.equals(",") ||
                 key.label.equals(".") ||
                 key.label.equals("ENTER");
@@ -505,7 +550,8 @@ public class ModernKeyboardView extends View {
     }
 
     private boolean shouldUseDrawable(String label) {
-        return label.equals("SHIFT") || label.equals("DELETE") || label.equals("ENTER");
+        return label.equals("SHIFT") || label.equals("DELETE") || label.equals("ENTER")
+                || label.equals("SETTINGS");
     }
 
     private void drawKeyDrawable(Canvas canvas, Key key, int tintColor) {
@@ -535,6 +581,7 @@ public class ModernKeyboardView extends View {
                 }
             case "DELETE": return R.drawable.ic_delete;
             case "ENTER": return R.drawable.ic_enter;
+            case "SETTINGS": return R.drawable.ic_settings;
             default: return 0;
         }
     }
@@ -950,6 +997,9 @@ public class ModernKeyboardView extends View {
                 break;
             case "ABC":
                 keyPressListener.onSpecialKeyPressed(KEY_SYMBOL);
+                break;
+            case "SETTINGS":
+                keyPressListener.onSpecialKeyPressed(KEY_SETTINGS);
                 break;
             default:
                 // Check if this key has Rade alternatives
