@@ -34,35 +34,44 @@ repo's ACTUAL current state (read the files — don't assume).
 
 ### Phase 2 — Signing setup (MANUAL — walk them through it click by click)
 
+**Rade Keyboard has already shipped to the Play Store**, so there is an existing upload
+key that MUST be reused. Do NOT create a new keystore — a new key won't match what Play
+has registered and every upload will be rejected ("signed with the wrong key").
+
+**Known signing facts for this app** (recovered from the original project's IDE config;
+passwords are NOT recorded anywhere and only the user has them):
+- **Upload keystore:** `~/Desktop/Important Documents/radekeyboard-keystore`
+- **Key alias:** `radekeyboard-key`
+- Almost certainly already enrolled in Play App Signing (the app is live).
+
 First **detect state**: look for a `signingConfigs` block in `app/build.gradle` and a
 `keystore.properties` file at the repo root. Confirm `keystore.properties`, `*.jks`,
 `*.keystore` are gitignored.
 
 - **If signing is already wired up:** say so (✅) and skip to Phase 3.
-- **If it's missing:** this is a one-time setup. The agent must NOT create keystores or
-  handle passwords. Present these steps and let the user do them:
+- **If it's not wired up yet** (the current state): walk the user through reusing the
+  existing key. The agent must NOT run keytool or handle passwords.
 
-  **2a. Create your upload keystore** (run in a terminal, in a safe folder OUTSIDE the repo):
+  **2a. Confirm the keystore is present.** Check that
+  `~/Desktop/Important Documents/radekeyboard-keystore` exists (agent can `ls` it). If it
+  has moved, search for it: `find "$HOME" -iname "radekeyboard-keystore*"`. If it truly
+  can't be found anywhere, jump to **2d (lost key)**.
+
+  **2b. User verifies the passwords** (only they have these). Have them run:
   ```bash
-  keytool -genkey -v -keystore rade-upload-key.jks \
-    -keyalias rade-upload -keyalg RSA -keysize 2048 -validity 10000
+  keytool -list -v -keystore ~/Desktop/Important\ Documents/radekeyboard-keystore
   ```
-  `keytool` will prompt for:
-  - a **keystore password** (choose one, save it in your password manager),
-  - your name/org fields (can be minimal — e.g. name = "Corrie Stroup", rest blank/Enter),
-  - confirm "yes" to the summary,
-  - a **key password** (press Enter to reuse the keystore password, or set a separate one — save it too).
+  It prompts for the **keystore password**; success + a listed `radekeyboard-key` alias
+  confirms both the file and the store password. (If the key has a separate password,
+  they'll need that too for the build.)
 
-  → You now have `rade-upload-key.jks`. **Move it somewhere permanent and backed up.**
-  Losing it means you can't update the app (unless enrolled in Play App Signing — next step).
-
-  **2b. Tell the agent the file path** (NOT the passwords). The agent will then:
-  - Write a gitignored `keystore.properties` at the repo root with placeholder password
-    fields for the user to fill in:
+  **2c. Agent wires Gradle to the existing key.** The agent will:
+  - Write a gitignored `keystore.properties` at the repo root, pre-filled with the known
+    path + alias and `CHANGE_ME` password placeholders:
     ```properties
-    storeFile=/absolute/path/to/rade-upload-key.jks
+    storeFile=/Users/<you>/Desktop/Important Documents/radekeyboard-keystore
     storePassword=CHANGE_ME
-    keyAlias=rade-upload
+    keyAlias=radekeyboard-key
     keyPassword=CHANGE_ME
     ```
   - Add a `signingConfigs` block to `app/build.gradle` that loads `keystore.properties`
@@ -70,17 +79,13 @@ First **detect state**: look for a `signingConfigs` block in `app/build.gradle` 
   - Verify `.gitignore` covers `keystore.properties`, `*.jks`, `*.keystore`.
 
   Then tell the user: **open `keystore.properties` and replace both `CHANGE_ME` values
-  with the passwords from step 2a.** (The agent never sees these.)
+  with the passwords from step 2b.** (The agent never sees these.)
 
-  **2c. Enroll in Play App Signing** (in the browser — this is the safety net if the
-  upload key is ever lost):
-  - Go to https://play.google.com/console → sign in → select **Rade Keyboard**.
-  - Left sidebar: **Test and release → Setup → App signing** (older UI: **Release →
-    Setup → App integrity**).
-  - If not enrolled, click **through the App Signing enrollment** and choose "Let Google
-    manage and protect your app signing key" (the default/recommended option).
-  - You don't upload the `.jks` here — Google generates the real signing key; your
-    `rade-upload-key.jks` is just the *upload* key.
+  **2d. Lost key fallback** (only if the keystore genuinely can't be found): if enrolled
+  in Play App Signing, you can register a new upload key — Play Console → **Test and
+  release → Setup → App signing → Request upload key reset** (Google emails a process;
+  takes ~2 days). Only then create a new keystore with `keytool -genkey`. If NOT enrolled
+  and the key is lost, the app can't be updated under the same listing.
 
 ### Phase 3 — Pre-flight checks (agent runs these, reports pass/fail)
 

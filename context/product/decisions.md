@@ -17,6 +17,20 @@ Non-obvious product/technical decisions worth remembering, so they don't get
 **Decision:** The persisted default (`SharedPreferences` `selected_language`) is `vi`.
 **Why:** The target audience is Vietnamese/Rade speakers; English is the fallback, not the default.
 
+## 2026-07-07 - Reuse the existing Play upload key (do not regenerate)
+
+**Context:** The app is already live on the Play Store, so an upload key was created
+during the first release. Signing was never wired into Gradle (releases were signed via
+Android Studio's wizard), so the key's location is easy to forget.
+**Decision:** Always reuse the existing upload key. Never `keytool -genkey` a new one for
+this app.
+**Why:** Play registers the original upload key; a new key is rejected ("signed with the
+wrong key"). Recovering/rotating a lost key requires a Play App Signing upload-key reset.
+**Known facts** (passwords are NOT stored here — password manager only):
+- Keystore: `~/Desktop/Important Documents/radekeyboard-keystore`
+- Key alias: `radekeyboard-key`
+- Recovered from the original clone's `.idea/workspace.xml` (`GenerateSignedApkSettings`).
+
 ## 2026-07-07 - Vibration/haptics removed
 
 **Context:** Earlier commits added key-press vibration, then a commit titled "Remove

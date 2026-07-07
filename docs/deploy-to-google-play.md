@@ -20,9 +20,20 @@ You do NOT repeat these for every release.
   under the package name `com.corriestroup.radekeyboard`.
 
 ### b. Upload keystore (signing key)
-Play requires every release to be signed. Create an **upload keystore** once and
-keep it safe — losing it (without Play App Signing enrolled) means you can never
-update the app.
+
+> **This app has already shipped — the upload key already exists. Reuse it; do NOT
+> create a new one** (a new key won't match what Play registered and uploads will be
+> rejected).
+>
+> - **Keystore:** `~/Desktop/Important Documents/radekeyboard-keystore`
+> - **Key alias:** `radekeyboard-key`
+> - Passwords: in your password manager (not recorded here). Verify with
+>   `keytool -list -v -keystore ~/Desktop/Important\ Documents/radekeyboard-keystore`.
+>
+> If it's ever moved, find it with `find "$HOME" -iname "radekeyboard-keystore*"`.
+
+For reference only — how the key *was* originally created (a brand-new app would do
+this once, then keep the `.jks` outside the repo and record the passwords):
 
 ```bash
 keytool -genkey -v \
@@ -30,9 +41,6 @@ keytool -genkey -v \
   -keyalias rade-upload \
   -keyalg RSA -keysize 2048 -validity 10000
 ```
-
-Store `rade-upload-key.jks` **outside the repo** (it must never be committed) and
-record the keystore password, key alias, and key password in a password manager.
 
 ### c. Enroll in Play App Signing
 Strongly recommended. Google holds the real app-signing key; you sign uploads with
