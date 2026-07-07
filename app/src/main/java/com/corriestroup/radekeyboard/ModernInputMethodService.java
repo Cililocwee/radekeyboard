@@ -12,6 +12,7 @@ public class ModernInputMethodService extends InputMethodService {
     private ModernKeyboardView keyboardView;
     private boolean isShiftPressed = false;
     private boolean isCapsLockOn = false;
+    private KeyboardLayer currentLayer = KeyboardLayer.RADE;
 
     @Override
     public View onCreateInputView() {
@@ -26,7 +27,15 @@ public class ModernInputMethodService extends InputMethodService {
             public void onSpecialKeyPressed(int specialKey) {
                 handleSpecialKey(specialKey);
             }
+
+            @Override
+            public void onLanguageSwipe(int direction) {
+                handleLanguageSwipe(direction);
+            }
         });
+
+        currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
+        keyboardView.setLanguageLayer(currentLayer);
 
         // Check auto-capitalization when keyboard is created
         updateAutoCapitalization();
@@ -38,11 +47,19 @@ public class ModernInputMethodService extends InputMethodService {
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         // Pick up settings changed while the keyboard was closed (number row,
-        // haptics), and refresh auto-caps for the newly focused field.
+        // haptics, layer), and refresh auto-caps for the newly focused field.
         if (keyboardView != null) {
             keyboardView.refreshFromPrefs();
+            currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
+            keyboardView.setLanguageLayer(currentLayer);
         }
         updateAutoCapitalization();
+    }
+
+    private void handleLanguageSwipe(int direction) {
+        currentLayer = direction > 0 ? currentLayer.next() : currentLayer.previous();
+        KeyboardPrefs.setKeyboardLayer(this, currentLayer.prefValue);
+        keyboardView.setLanguageLayer(currentLayer);
     }
 
     private void handleKeyPress(String key, int keyCode) {
@@ -69,6 +86,16 @@ public class ModernInputMethodService extends InputMethodService {
             // Check if we should auto-capitalize after this text
             updateAutoCapitalization();
             return; // Exit early since we handled everything
+        }
+
+        // Layer-specific text paths; Rade falls through to the combining-mark logic below.
+        if (currentLayer == KeyboardLayer.VIETNAMESE) {
+            handleVietnameseKey(ic, key);
+            return;
+        }
+        if (currentLayer == KeyboardLayer.ENGLISH) {
+            commitPlainKey(ic, key);
+            return;
         }
 
         // Handle tone marks and combining characters
@@ -112,6 +139,70 @@ public class ModernInputMethodService extends InputMethodService {
         }
         // Check if we should auto-capitalize after this text
         updateAutoCapitalization();
+    }
+
+    /**
+     * Vietnamese layer: single letters run through the Telex composer against the
+     * word before the cursor. Shift is resolved BEFORE composing (the post-hoc
+     * uppercase in the Rade path would corrupt multi-character recommits), and the
+     * edit is applied as one batch. Output is precomposed NFC.
+     */
+    private void handleVietnameseKey(InputConnection ic, String key) {
+        if (key.length() != 1 || !Character.isLetter(key.charAt(0))) {
+            commitPlainKey(ic, key);
+            return;
+        }
+        char typed = key.charAt(0);
+        if (isShiftPressed || isCapsLockOn) {
+            typed = Character.toUpperCase(typed);
+            consumeOneShotShift();
+        }
+
+        CharSequence before = ic.getTextBeforeCursor(32, 0);
+        TelexComposer.Edit edit = TelexComposer.process(extractTrailingWord(before), typed);
+        ic.beginBatchEdit();
+        if (edit.deleteCount > 0) {
+            ic.deleteSurroundingText(edit.deleteCount, 0);
+        }
+        ic.commitText(edit.commit, 1);
+        ic.endBatchEdit();
+        updateAutoCapitalization();
+    }
+
+    /** English layer / non-letter fallback: commit as-is with the usual shift handling. */
+    private void commitPlainKey(InputConnection ic, String key) {
+        String text = key;
+        if (isShiftPressed || isCapsLockOn) {
+            text = text.toUpperCase();
+            consumeOneShotShift();
+        }
+        ic.commitText(text, 1);
+        updateAutoCapitalization();
+    }
+
+    private void consumeOneShotShift() {
+        if (isShiftPressed) {
+            isShiftPressed = false;
+            keyboardView.updateShiftState(false, isCapsLockOn);
+        }
+    }
+
+    /**
+     * The letter run (including combining marks, which the Rade layer commits)
+     * immediately before the cursor — the composer's input word.
+     */
+    private static String extractTrailingWord(CharSequence before) {
+        if (before == null || before.length() == 0) return "";
+        int start = before.length();
+        while (start > 0) {
+            char c = before.charAt(start - 1);
+            if (Character.isLetter(c) || Character.getType(c) == Character.NON_SPACING_MARK) {
+                start--;
+            } else {
+                break;
+            }
+        }
+        return before.subSequence(start, before.length()).toString();
     }
 
     private void deleteLastWord() {

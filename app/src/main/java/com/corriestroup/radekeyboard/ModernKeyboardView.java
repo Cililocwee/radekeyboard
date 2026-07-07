@@ -23,9 +23,7 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ModernKeyboardView extends View {
 
@@ -45,90 +43,10 @@ public class ModernKeyboardView extends View {
     // Layout rows live in KeyboardLayouts (pure, unit-tested); the view only picks
     // which set to render based on symbol mode and the number-row setting.
 
-    // Vietnamese/Rade diacritics map for long-press
-    private static final Map<String, String[]> RADE_ALTS = new HashMap<>();
-    static {
-        // Tone marks on g, h, j, k, l
-        RADE_ALTS.put("g", new String[]{"̀","-"}); // Down tone (grave accent)
-        RADE_ALTS.put("h", new String[]{"̉","+"}); // Hoi tone (hook above)
-        RADE_ALTS.put("j", new String[]{"̃","="}); // Nga tone (tilde)
-        RADE_ALTS.put("k", new String[]{"́","("}); // Up tone (acute accent)
-        RADE_ALTS.put("l", new String[]{"̣",")"}); // Nang tone (dot below)
+    // Long-press alternates live in LayerAlternates (per language layer); the view
+    // resolves them through effectiveAlts()/previewCountFor() only.
+    private KeyboardLayer layer = KeyboardLayer.RADE;
 
-        // Other symbol alternatives (keeping your existing ones)
-        RADE_ALTS.put("q", new String[]{"%"});
-        RADE_ALTS.put("w", new String[]{"^"});
-        RADE_ALTS.put("e", new String[]{"~","ê"});
-        RADE_ALTS.put("r", new String[]{"|"});
-        RADE_ALTS.put("t", new String[]{"["});
-        RADE_ALTS.put("y", new String[]{"]"});
-        RADE_ALTS.put("u", new String[]{"<", "ư"});
-        RADE_ALTS.put("i", new String[]{">"});
-        RADE_ALTS.put("o", new String[]{"{", "ô", "ơ"});
-        RADE_ALTS.put("p", new String[]{"}"});
-
-        RADE_ALTS.put("a", new String[]{"@", "ă", "â"});
-        RADE_ALTS.put("s", new String[]{"#"});
-        RADE_ALTS.put("d", new String[]{"&", "đ"});
-        RADE_ALTS.put("f", new String[]{"*"});
-        // g, h, j, k, l now have tone marks instead
-
-        RADE_ALTS.put("z", new String[]{"_"});
-        RADE_ALTS.put("x", new String[]{"$"});
-        RADE_ALTS.put("c", new String[]{"\""});
-        RADE_ALTS.put("v", new String[]{"'"});
-        RADE_ALTS.put("b", new String[]{":"});
-        RADE_ALTS.put("n", new String[]{";","ñ"});
-        RADE_ALTS.put("m", new String[]{"/"});
-
-        // Long-press alternatives for bottom row
-        RADE_ALTS.put(",", new String[]{"˘"}); // Comma shows breve on long press
-        RADE_ALTS.put(".", new String[]{",","!","?"});
-
-
-    }
-
-    // Add this new map after your RADE_ALTS map
-    private static final Map<String, Integer> ALT_PREVIEW_COUNT = new HashMap<>();
-    static {
-        // All keys with alternatives set to show 1 preview by default
-        ALT_PREVIEW_COUNT.put("a", 1); // Show ă (first alternative)
-        ALT_PREVIEW_COUNT.put("e", 1); // Show ê
-        ALT_PREVIEW_COUNT.put("o", 1); // Show ô (first alternative)
-        ALT_PREVIEW_COUNT.put("u", 1); // Show ư
-        ALT_PREVIEW_COUNT.put("d", 1); // Show đ
-
-        // Tone marks
-        ALT_PREVIEW_COUNT.put("g", 2); // Show ̀
-        ALT_PREVIEW_COUNT.put("h", 2); // Show ̉
-        ALT_PREVIEW_COUNT.put("j", 2); // Show ̃
-        ALT_PREVIEW_COUNT.put("k", 2); // Show ́
-        ALT_PREVIEW_COUNT.put("l", 2); // Show ̣
-
-        // Symbol alternatives
-        ALT_PREVIEW_COUNT.put("q", 1); // Show %
-        ALT_PREVIEW_COUNT.put("w", 1); // Show ^
-        ALT_PREVIEW_COUNT.put("r", 1); // Show |
-        ALT_PREVIEW_COUNT.put("t", 1); // Show [
-        ALT_PREVIEW_COUNT.put("y", 1); // Show ]
-        ALT_PREVIEW_COUNT.put("i", 1); // Show >
-        ALT_PREVIEW_COUNT.put("p", 1); // Show }
-        ALT_PREVIEW_COUNT.put("s", 1); // Show #
-        ALT_PREVIEW_COUNT.put("f", 1); // Show *
-        ALT_PREVIEW_COUNT.put("z", 1); // Show _
-        ALT_PREVIEW_COUNT.put("x", 1); // Show $
-        ALT_PREVIEW_COUNT.put("c", 1); // Show "
-        ALT_PREVIEW_COUNT.put("v", 1); // Show '
-        ALT_PREVIEW_COUNT.put("b", 1); // Show :
-        ALT_PREVIEW_COUNT.put("n", 1); // Show ;
-        ALT_PREVIEW_COUNT.put("m", 1); // Show /
-
-        // Bottom row
-        ALT_PREVIEW_COUNT.put(",", 1); // Show ˘
-        ALT_PREVIEW_COUNT.put(".", 3); // Show ? (first alternative)
-
-
-    }
     private List<Key> keys = new ArrayList<>();
     private Paint keyPaint, textPaint, backgroundPaint;
     private OnKeyPressListener keyPressListener;
@@ -158,6 +76,14 @@ public class ModernKeyboardView extends View {
     private int activePointerId = MotionEvent.INVALID_POINTER_ID;
     private float downX, downY;
     private int touchSlop;
+
+    // Space-bar language swipe: horizontal slide past a fraction of the space key's
+    // width cycles the language layer instead of committing a space.
+    private static final float SPACE_SWIPE_THRESHOLD_FRACTION = 0.25f;
+    private Key spaceKeyDown;
+    private float spaceDownX;
+    private boolean spaceSlideActive = false;
+    private int slideDirection = 0; // -1 left (previous), +1 right (next)
 
     // Haptics (opt-in via settings; fields cached so no prefs read per keystroke)
     private Vibrator vibrator;
@@ -191,6 +117,8 @@ public class ModernKeyboardView extends View {
         void onKeyPressed(String key, int keyCode);
         void onSpecialKeyPressed(int specialKey);
 
+        /** Space-bar swipe: {@code +1} = next layer (rightward), {@code -1} = previous. */
+        void onLanguageSwipe(int direction);
     }
 
     public ModernKeyboardView(Context context) {
@@ -233,13 +161,25 @@ public class ModernKeyboardView extends View {
     }
 
     /**
-     * The long-press alternates a key actually shows: the layer's base alternates,
-     * plus its column digit first when the number row is hidden. All alternate
-     * lookups must go through here — never read RADE_ALTS directly.
+     * The long-press alternates a key actually shows: the active layer's base
+     * alternates, plus its column digit first when the number row is hidden. All
+     * alternate lookups must go through here — never read the layer maps directly.
      */
     private String[] effectiveAlts(String label) {
-        String[] base = RADE_ALTS.get(label.toLowerCase());
+        String[] base = LayerAlternates.alts(layer).get(label.toLowerCase());
         return KeyboardLayouts.effectiveAlternates(label, base, numberRowEnabled);
+    }
+
+    private Integer previewCountFor(String label) {
+        return LayerAlternates.previewCounts(layer).get(label.toLowerCase());
+    }
+
+    /** Set the active language layer (drawn on the space bar; selects alternates). */
+    public void setLanguageLayer(KeyboardLayer newLayer) {
+        if (newLayer != null && newLayer != layer) {
+            layer = newLayer;
+            invalidate();
+        }
     }
 
     /**
@@ -506,6 +446,8 @@ public class ModernKeyboardView extends View {
         // Draw key text or drawable
         if (shouldUseDrawable(key.label)) {
             drawKeyDrawable(canvas, key, textColor);
+        } else if (key.label.equals(" ")) {
+            drawSpacebarLabel(canvas, key, textColor);
         } else {
             textPaint.setColor(textColor);
             String displayText = getDisplayText(key.label);
@@ -530,7 +472,7 @@ public class ModernKeyboardView extends View {
 
                 // Draw alternative character preview (smaller, less opaque)
                 String[] alternatives = effectiveAlts(key.label);
-                Integer previewCount = ALT_PREVIEW_COUNT.get(key.label.toLowerCase());
+                Integer previewCount = previewCountFor(key.label);
                 if (previewCount == null && alternatives != null && alternatives.length > 0) {
                     previewCount = 1; // e.g. a digit gained via the number-row setting
                 }
@@ -587,6 +529,37 @@ public class ModernKeyboardView extends View {
                 textPaint.setTextSize(originalTextSize);
             }
         }
+    }
+
+    /**
+     * The space bar shows the active layer's name (Gboard-style); during a language
+     * swipe it previews the layer that releasing would switch to.
+     */
+    private void drawSpacebarLabel(Canvas canvas, Key key, int pressedTextColor) {
+        String label;
+        int color;
+        if (spaceSlideActive && slideDirection != 0) {
+            KeyboardLayer target = slideDirection > 0 ? layer.next() : layer.previous();
+            label = "‹ " + target.spacebarLabel + " ›";
+            color = primaryColor;
+        } else if (key == pressedKey) {
+            label = layer.spacebarLabel;
+            color = pressedTextColor;
+        } else {
+            label = layer.spacebarLabel;
+            color = Color.argb(140, Color.red(onSurfaceColor),
+                    Color.green(onSurfaceColor), Color.blue(onSurfaceColor));
+        }
+
+        float originalSize = textPaint.getTextSize();
+        int originalColor = textPaint.getColor();
+        textPaint.setTextSize(originalSize * 0.75f);
+        textPaint.setColor(color);
+        float centerX = key.x + key.width / 2;
+        float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 2;
+        canvas.drawText(label, centerX, centerY, textPaint);
+        textPaint.setTextSize(originalSize);
+        textPaint.setColor(originalColor);
     }
 
     private boolean shouldUseDrawable(String label) {
@@ -648,6 +621,10 @@ public class ModernKeyboardView extends View {
                 return true;
 
             case MotionEvent.ACTION_POINTER_DOWN: {
+                // The language-swipe gesture owns the interaction once active.
+                if (spaceSlideActive) {
+                    return true;
+                }
                 // A second finger going down while the first still rests is how fast
                 // two-thumb typing looks: commit the current key immediately, then the
                 // new pointer takes over.
@@ -671,6 +648,29 @@ public class ModernKeyboardView extends View {
                 if (moveIndex < 0) return true;
                 float x = event.getX(moveIndex);
                 float y = event.getY(moveIndex);
+
+                // Space-bar swipe. This branch swallows all moves that started on the
+                // space key (including vertical drift) — it must run before the
+                // slide-to-neighbor logic below or drifting off the space bar would
+                // kill the gesture.
+                if (spaceKeyDown != null) {
+                    float dx = x - spaceDownX;
+                    float threshold = spaceKeyDown.width * SPACE_SWIPE_THRESHOLD_FRACTION;
+                    if (!spaceSlideActive && Math.abs(dx) > threshold) {
+                        spaceSlideActive = true;
+                        cancelLongPressTimer();
+                        pressedKey = null; // releasing must not commit a space
+                        performKeyHaptic();
+                    }
+                    if (spaceSlideActive) {
+                        int dir = dx > 0 ? 1 : -1;
+                        if (dir != slideDirection) {
+                            slideDirection = dir;
+                            invalidate();
+                        }
+                    }
+                    return true;
+                }
 
                 if (isLongPressing) {
                     handleAlternativeSelection(x, y);
@@ -731,6 +731,14 @@ public class ModernKeyboardView extends View {
         downX = x;
         downY = y;
         Key touchedKey = findKeyAt(x, y);
+        if (touchedKey != null && touchedKey.label.equals(" ")) {
+            spaceKeyDown = touchedKey;
+            spaceDownX = x;
+        } else {
+            spaceKeyDown = null;
+        }
+        spaceSlideActive = false;
+        slideDirection = 0;
         if (touchedKey != null) {
             pressedKey = touchedKey;
             performKeyHaptic();
@@ -741,11 +749,15 @@ public class ModernKeyboardView extends View {
         }
     }
 
-    /** Commit whatever the active pointer was doing (tap or popup selection), then reset. */
+    /** Commit whatever the active pointer was doing (tap, popup selection, or language swipe), then reset. */
     private void commitActivePress() {
         cancelLongPressTimer();
         stopContinuousDelete();
-        if (isLongPressing) {
+        if (spaceSlideActive) {
+            if (keyPressListener != null && slideDirection != 0) {
+                keyPressListener.onLanguageSwipe(slideDirection);
+            }
+        } else if (isLongPressing) {
             handleAlternativeCommit();
         } else if (pressedKey != null) {
             handleKeyPress(pressedKey);
@@ -758,6 +770,9 @@ public class ModernKeyboardView extends View {
         isLongPressing = false;
         isContinuousDeleting = false;
         selectedAltIndex = -1;
+        spaceKeyDown = null;
+        spaceSlideActive = false;
+        slideDirection = 0;
         hideLongPressPopup();
         invalidate();
     }
