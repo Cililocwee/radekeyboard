@@ -1,8 +1,10 @@
 package com.corriestroup.radekeyboard;
 
+import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
 public class ModernInputMethodService extends InputMethodService {
@@ -30,6 +32,17 @@ public class ModernInputMethodService extends InputMethodService {
         updateAutoCapitalization();
 
         return keyboardView;
+    }
+
+    @Override
+    public void onStartInputView(EditorInfo info, boolean restarting) {
+        super.onStartInputView(info, restarting);
+        // Pick up settings changed while the keyboard was closed (number row,
+        // haptics), and refresh auto-caps for the newly focused field.
+        if (keyboardView != null) {
+            keyboardView.refreshFromPrefs();
+        }
+        updateAutoCapitalization();
     }
 
     private void handleKeyPress(String key, int keyCode) {
@@ -162,6 +175,16 @@ public class ModernInputMethodService extends InputMethodService {
         }
     }
     private void handleSpecialKey(int specialKey) {
+        // Settings must open even without an input connection, so it is handled
+        // before the null guard below.
+        if (specialKey == ModernKeyboardView.KEY_SETTINGS) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            requestHideSelf(0);
+            return;
+        }
+
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
 

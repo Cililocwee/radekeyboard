@@ -211,6 +211,35 @@ public class ModernKeyboardView extends View {
         setBackgroundColor(surfaceColor);
         touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
         vibrator = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+        refreshFromPrefs();
+    }
+
+    /**
+     * Re-read the persisted settings. Called at creation and from the service's
+     * onStartInputView, so settings changes apply when the keyboard (re)opens —
+     * never mid-session, which would resize the IME window (see calculateDimensions).
+     */
+    public void refreshFromPrefs() {
+        hapticsEnabled = KeyboardPrefs.isHapticsEnabled(getContext());
+        hapticDurationMs = KeyboardPrefs.getHapticDurationMs(getContext());
+        boolean numberRow = KeyboardPrefs.isNumberRowEnabled(getContext());
+        if (numberRow != numberRowEnabled) {
+            numberRowEnabled = numberRow;
+            calculateDimensions();
+            createKeys();
+            requestLayout();
+            invalidate();
+        }
+    }
+
+    /**
+     * The long-press alternates a key actually shows: the layer's base alternates,
+     * plus its column digit first when the number row is hidden. All alternate
+     * lookups must go through here — never read RADE_ALTS directly.
+     */
+    private String[] effectiveAlts(String label) {
+        String[] base = RADE_ALTS.get(label.toLowerCase());
+        return KeyboardLayouts.effectiveAlternates(label, base, numberRowEnabled);
     }
 
     /**
@@ -500,9 +529,11 @@ public class ModernKeyboardView extends View {
                 canvas.drawText(displayText, centerX, mainTextY, textPaint);
 
                 // Draw alternative character preview (smaller, less opaque)
-                // Draw alternative character preview (smaller, less opaque)
-                String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
+                String[] alternatives = effectiveAlts(key.label);
                 Integer previewCount = ALT_PREVIEW_COUNT.get(key.label.toLowerCase());
+                if (previewCount == null && alternatives != null && alternatives.length > 0) {
+                    previewCount = 1; // e.g. a digit gained via the number-row setting
+                }
 
                 if (alternatives != null && alternatives.length > 0 && previewCount != null && previewCount > 0) {
                     // Save original text size and color
@@ -811,7 +842,7 @@ public class ModernKeyboardView extends View {
             keyPressListener.onKeyPressed(selectedText, selectedText.charAt(0));
         } else {
             // No alternative selected - use the first alternative character
-            String[] alternatives = RADE_ALTS.get(longPressedKey.label.toLowerCase());
+            String[] alternatives = effectiveAlts(longPressedKey.label);
             if (alternatives != null && alternatives.length > 0) {
                 String firstAlt = alternatives[0];
 
@@ -859,7 +890,8 @@ public class ModernKeyboardView extends View {
         }
 
         // Rest of your existing long press logic for other keys...
-        if (!RADE_ALTS.containsKey(key.label.toLowerCase())) {
+        String[] alternatives = effectiveAlts(key.label);
+        if (alternatives == null || alternatives.length == 0) {
             return;
         }
 
@@ -884,7 +916,7 @@ public class ModernKeyboardView extends View {
     }
 
     private void showLongPressPopup(Key key) {
-        String[] alternatives = RADE_ALTS.get(key.label.toLowerCase());
+        String[] alternatives = effectiveAlts(key.label);
         if (alternatives == null || alternatives.length == 0) return;
 
         // Create a proper popup with all alternatives
@@ -1051,14 +1083,7 @@ public class ModernKeyboardView extends View {
                 keyPressListener.onSpecialKeyPressed(KEY_SETTINGS);
                 break;
             default:
-                // Check if this key has Rade alternatives
-                if (RADE_ALTS.containsKey(label.toLowerCase())) {
-                    // Regular key with potential alternatives
-                    keyPressListener.onKeyPressed(label, label.charAt(0));
-                } else {
-                    // Regular key
-                    keyPressListener.onKeyPressed(label, label.charAt(0));
-                }
+                keyPressListener.onKeyPressed(label, label.charAt(0));
                 break;
         }
     }

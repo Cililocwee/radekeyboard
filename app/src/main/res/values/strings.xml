@@ -75,4 +75,17 @@
     <string name="completed">Completed</string>
     <string name="step1_first">Complete Step 1 first</string>
     <string name="complete_previous_steps">Complete previous steps first</string>
+
+    <!-- Keyboard settings screen -->
+    <string name="settings_title">Keyboard Settings</string>
+    <string name="settings_section_feedback">Feedback</string>
+    <string name="settings_haptics_toggle">Vibrate on keypress</string>
+    <string name="settings_haptic_strength">Vibration strength</string>
+    <string name="settings_haptic_light">Light</string>
+    <string name="settings_haptic_medium">Medium</string>
+    <string name="settings_haptic_strong">Strong</string>
+    <string name="settings_section_layout">Layout</string>
+    <string name="settings_number_row_toggle">Number row</string>
+    <string name="settings_number_row_hint">When off, hold the top letter keys to type numbers</string>
+    <string name="settings_apply_hint">Changes apply the next time the keyboard opens</string>
 </resources>

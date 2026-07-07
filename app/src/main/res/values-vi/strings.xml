@@ -75,4 +75,17 @@
     <string name="completed">Hoàn thành</string>
     <string name="step1_first">Hoàn thành Bước 1 trước</string>
     <string name="complete_previous_steps">Hoàn thành các bước trước</string>
+
+    <!-- Keyboard settings screen -->
+    <string name="settings_title">Cài đặt bàn phím</string>
+    <string name="settings_section_feedback">Phản hồi</string>
+    <string name="settings_haptics_toggle">Rung khi nhấn phím</string>
+    <string name="settings_haptic_strength">Độ mạnh rung</string>
+    <string name="settings_haptic_light">Nhẹ</string>
+    <string name="settings_haptic_medium">Vừa</string>
+    <string name="settings_haptic_strong">Mạnh</string>
+    <string name="settings_section_layout">Bố cục</string>
+    <string name="settings_number_row_toggle">Hàng phím số</string>
+    <string name="settings_number_row_hint">Khi tắt, giữ các phím chữ hàng trên để gõ số</string>
+    <string name="settings_apply_hint">Thay đổi sẽ áp dụng lần mở bàn phím tiếp theo</string>
 </resources>
