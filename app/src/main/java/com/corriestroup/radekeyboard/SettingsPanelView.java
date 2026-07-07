@@ -36,8 +36,10 @@ public class SettingsPanelView extends FrameLayout {
     private boolean binding = false; // suppress listeners while loading values
 
     public SettingsPanelView(Context context) {
-        super(context);
-        LayoutInflater.from(context).inflate(R.layout.settings_panel, this, true);
+        // The IME service context has no AppCompat theme; inflating SwitchCompat
+        // with it crashes on first layout. Wrap in the app theme.
+        super(new android.view.ContextThemeWrapper(context, R.style.AppTheme));
+        LayoutInflater.from(getContext()).inflate(R.layout.settings_panel, this, true);
 
         themeGroup = findViewById(R.id.group_theme);
         hapticsSwitch = findViewById(R.id.switch_haptics);

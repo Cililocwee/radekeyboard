@@ -59,7 +59,7 @@
     <string name="step3_title">Kiểm Tra Bàn Phím</string>
     <string name="congratulations">🎉 Chúc mừng! Bạn đã sẵn sàng!</string>
     <string name="test_hint">Kiểm tra bàn phím Rade tại đây: áêíôúýăâêôơư</string>
-    <string name="test_tips">✨ Thử gõ nguyên âm và nhấn giữ để có dấu thanh!\n📝 Nhấn đúp Shift để khóa chữ hoa\n🔙 Giữ phím xóa để xóa cả từ</string>
+    <string name="test_tips">✨ Thử gõ nguyên âm và nhấn giữ để thêm dấu thanh!\n🌐 Vuốt trên phím cách để đổi ngôn ngữ\n📝 Nhấn đúp Shift để khóa chữ hoa\n🔙 Giữ phím xóa để xóa cả từ</string>
 
     <string name="language_toggle">Ngôn Ngữ</string>
 

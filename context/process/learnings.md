@@ -87,3 +87,11 @@ as you go.
   longer sits at the window origin (suggestion strip above it) — convert
   view-local key positions with `getLocationInWindow` or popups drift by the
   strip height.
+- **AppCompat widgets crash when inflated with the raw IME service context** —
+  `SwitchCompat` inflates fine but dies on first layout/draw because the service
+  theme lacks AppCompat attributes. Wrap the context:
+  `new ContextThemeWrapper(context, R.style.AppTheme)` before inflating any
+  keyboard-hosted panel that uses androidx widgets.
+- **targetSdk 35 = enforced edge-to-edge for activities too.** Onboarding/testing
+  screens rendered under the status bar and gesture bar; roots need
+  `android:fitsSystemWindows="true"` (or inset listeners).
