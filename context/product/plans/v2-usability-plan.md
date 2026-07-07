@@ -1,5 +1,13 @@
 # Rade Keyboard v2 — Smoothness, Settings, Symbol Fix, Language Layers, Prediction
 
+> **STATUS (2026-07-07): implemented.** All five workstreams landed on this branch
+> (commits `30c09aa`..`29d301b`): pure helpers + tests, constant-height symbol fix,
+> multi-touch rewrite, settings screen, RD/VN/ENG layers with Telex + spacebar swipe,
+> suggestion strip + prediction P1 (46 JVM tests green; lint clean). Remaining:
+> on-device verification on the S24 Ultra (see Verification section) and the
+> device-only items there. Prediction P2 (bigrams) / P3 (user history) and the
+> [improvement backlog](improvement-backlog.md) are future rounds.
+
 ## Context
 
 Rade Keyboard (native Android IME, Java, minSdk 21 / targetSdk 35) ships a single Canvas-drawn
