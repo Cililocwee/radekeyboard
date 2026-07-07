@@ -6,5 +6,16 @@
 /.idea/workspace.xml
 .DS_Store
 /build
+/app/build
 /captures
 .externalNativeBuild
+
+# Release build artifacts — never commit
+/app/release/
+*.aab
+*.apk
+
+# Signing secrets — never commit
+/keystore.properties
+*.jks
+*.keystore

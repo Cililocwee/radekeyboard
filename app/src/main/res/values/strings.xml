@@ -1,42 +1,78 @@
 <resources>
     <string name="app_name">Rade Keyboard</string>
 
-    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
-        <string name="alts_for_a">\@</string>
-        <string name="alts_for_b">:</string>
-        <string name="alts_for_c">\"</string>
-        <string name="alts_for_d">&amp;</string>
-        <string name="alts_for_e">3</string>
-        <string name="alts_for_f">*</string>
-        <string name="alts_for_g">-</string>
-        <string name="alts_for_h">+</string>
-        <string name="alts_for_i">8</string>
-        <string name="alts_for_j">=</string>
-        <string name="alts_for_k">(</string>
-        <string name="alts_for_l">)</string>
-        <string name="alts_for_m">/</string>
-        <string name="alts_for_n">;</string>
-        <string name="alts_for_o">9</string>
-        <string name="alts_for_p">0</string>
-        <string name="alts_for_q">1</string>
-        <string name="alts_for_r">4</string>
-        <string name="alts_for_s">#</string>
-        <string name="alts_for_t">5</string>
-        <string name="alts_for_u">7</string>
-        <string name="alts_for_v">\'</string>
-        <string name="alts_for_w">2</string>
-        <string name="alts_for_x">$</string>
-        <string name="alts_for_y">6</string>
-        <string name="alts_for_z">_</string>
+    <!-- Keyboard layout definitions (keep existing) -->
+    <string name="alts_for_a">\@</string>
+    <string name="alts_for_b">:</string>
+    <string name="alts_for_c">\"</string>
+    <string name="alts_for_d">&amp;</string>
+    <string name="alts_for_e">3</string>
+    <string name="alts_for_f">*</string>
+    <string name="alts_for_g">-</string>
+    <string name="alts_for_h">+</string>
+    <string name="alts_for_i">8</string>
+    <string name="alts_for_j">=</string>
+    <string name="alts_for_k">(</string>
+    <string name="alts_for_l">)</string>
+    <string name="alts_for_m">/</string>
+    <string name="alts_for_n">;</string>
+    <string name="alts_for_o">9</string>
+    <string name="alts_for_p">0</string>
+    <string name="alts_for_q">1</string>
+    <string name="alts_for_r">4</string>
+    <string name="alts_for_s">#</string>
+    <string name="alts_for_t">5</string>
+    <string name="alts_for_u">7</string>
+    <string name="alts_for_v">\'</string>
+    <string name="alts_for_w">2</string>
+    <string name="alts_for_x">$</string>
+    <string name="alts_for_y">6</string>
+    <string name="alts_for_z">_</string>
 
-        <string name="alts_for_up_a">ĂÂẪ</string>
-        <string name="alts_for_up_b">Ƀ</string>
-        <string name="alts_for_up_c">Č</string>
-        <string name="alts_for_up_d">Đ</string>
-        <string name="alts_for_up_e">ÊĔỄ</string>
-        <string name="alts_for_up_i">Ĭ</string>
-        <string name="alts_for_up_n">Ñ</string>
-        <string name="alts_for_up_o">ÔŎỖƠỠ</string>
-        <string name="alts_for_up_u">ŬƯỮ</string>
+    <string name="alts_for_up_a">ĂÂẪ</string>
+    <string name="alts_for_up_b">Ƀ</string>
+    <string name="alts_for_up_c">Č</string>
+    <string name="alts_for_up_d">Đ</string>
+    <string name="alts_for_up_e">ÊĔỄ</string>
+    <string name="alts_for_up_i">Ĭ</string>
+    <string name="alts_for_up_n">Ñ</string>
+    <string name="alts_for_up_o">ÔŎỖƠỠ</string>
+    <string name="alts_for_up_u">ŬƯỮ</string>
 
+    <!-- Onboarding Flow Strings -->
+    <string name="welcome_title">Simple Rade Keyboard</string>
+    <string name="welcome_description">This is a passion project of mine to make \na keyboard for the Rade language with \ntone marks and smart typing features</string>
+    <string name="get_started">Get Started</string>
+
+    <string name="step_1_of_3">Step 1 of 3</string>
+    <string name="step_2_of_3">Step 2 of 3</string>
+    <string name="step_3_of_3">Step 3 of 3</string>
+
+    <string name="step1_title">Enable Rade Keyboard</string>
+    <string name="step1_description">This will open Android\'s keyboard settings.\n\n📱 Look for \'Rade Keyboard\' in the list\n✅ Turn it ON\n↩️ Come back to this app</string>
+    <string name="enable_keyboard">Enable Keyboard</string>
+
+    <string name="step2_title">Select Rade Keyboard</string>
+    <string name="step2_description">Now make Rade Keyboard your active keyboard.\n\n📱 Choose \'Rade Keyboard\' from the keyboard picker\n⌨️ Or long-press the space bar to switch\n🔄 You can also pull down notifications and tap the keyboard icon</string>
+    <string name="open_keyboard_picker">Open Keyboard Picker</string>
+
+    <string name="step3_title">Test Your Keyboard</string>
+    <string name="congratulations">🎉 Congratulations! You\'re ready to go!</string>
+    <string name="test_hint">Test your Rade keyboard here: áêíôúýăâêôơư</string>
+    <string name="test_tips">✨ Try typing vowels and long-pressing for tone marks!\n📝 Double-tap Shift for caps lock\n🔙 Hold delete key to delete whole words</string>
+
+    <string name="language_toggle">Language</string>
+
+    <string name="all_set">All Set!</string>
+    <string name="ready_message">Rade Keyboard is now ready to use.\nEnjoy typing in Rade!</string>
+    <string name="start_typing">Start Typing!</string>
+
+    <!-- Status messages for steps -->
+    <string name="step1_status_pending">⏳ Tap \'Enable Keyboard\' below</string>
+    <string name="step2_status_pending">⏳ Tap \'Select Keyboard\' below</string>
+    <string name="step3_status_ready">Ready to test!</string>
+
+    <string name="completed">Completed</string>
+    <string name="step1_first">Complete Step 1 first</string>
+    <string name="complete_previous_steps">Complete previous steps first</string>
 </resources>

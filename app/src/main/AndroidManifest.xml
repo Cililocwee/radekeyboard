@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.corriestroup.radekeyboard">
-
-    <!-- No additional permissions needed for basic IME functionality -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:allowBackup="true"
@@ -21,8 +18,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Add the new OnboardingActivity -->
+        <activity
+            android:exported="false"
+            android:name="com.corriestroup.radekeyboard.OnboardingActivity"
+            android:theme="@style/AppTheme" />
+
         <service
-            android:name="com.corriestroup.radekeyboard.MyInputMethodService"
+            android:name="com.corriestroup.radekeyboard.ModernInputMethodService"
             android:exported="true"
             android:enabled="true"
             android:permission="android.permission.BIND_INPUT_METHOD">

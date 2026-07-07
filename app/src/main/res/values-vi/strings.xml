@@ -1,0 +1,78 @@
+<resources>
+    <string name="app_name">Bàn Phím Rade</string>
+
+    <!-- Keep keyboard layout definitions the same -->
+    <string name="alts_for_a">\@</string>
+    <string name="alts_for_b">:</string>
+    <string name="alts_for_c">\"</string>
+    <string name="alts_for_d">&amp;</string>
+    <string name="alts_for_e">3</string>
+    <string name="alts_for_f">*</string>
+    <string name="alts_for_g">-</string>
+    <string name="alts_for_h">+</string>
+    <string name="alts_for_i">8</string>
+    <string name="alts_for_j">=</string>
+    <string name="alts_for_k">(</string>
+    <string name="alts_for_l">)</string>
+    <string name="alts_for_m">/</string>
+    <string name="alts_for_n">;</string>
+    <string name="alts_for_o">9</string>
+    <string name="alts_for_p">0</string>
+    <string name="alts_for_q">1</string>
+    <string name="alts_for_r">4</string>
+    <string name="alts_for_s">#</string>
+    <string name="alts_for_t">5</string>
+    <string name="alts_for_u">7</string>
+    <string name="alts_for_v">\'</string>
+    <string name="alts_for_w">2</string>
+    <string name="alts_for_x">$</string>
+    <string name="alts_for_y">6</string>
+    <string name="alts_for_z">_</string>
+
+    <string name="alts_for_up_a">ĂÂẪ</string>
+    <string name="alts_for_up_b">Ƀ</string>
+    <string name="alts_for_up_c">Č</string>
+    <string name="alts_for_up_d">Đ</string>
+    <string name="alts_for_up_e">ÊĔỄ</string>
+    <string name="alts_for_up_i">Ĭ</string>
+    <string name="alts_for_up_n">Ñ</string>
+    <string name="alts_for_up_o">ÔŎỖƠỠ</string>
+    <string name="alts_for_up_u">ŬƯỮ</string>
+
+    <!-- Vietnamese Onboarding Flow -->
+    <string name="welcome_title">Bàn Phím Rade Đơn Giản</string>
+    <string name="welcome_description">Đây là dự án đam mê của tôi để tạo ra \nmột bàn phím cho ngôn ngữ Rade với \ndấu thanh và tính năng gõ thông minh</string>
+    <string name="get_started">Bắt Đầu</string>
+
+    <string name="step_1_of_3">Bước 1 trong 3</string>
+    <string name="step_2_of_3">Bước 2 trong 3</string>
+    <string name="step_3_of_3">Bước 3 trong 3</string>
+
+    <string name="step1_title">Kích Hoạt Bàn Phím Rade</string>
+    <string name="step1_description">Điều này sẽ mở cài đặt bàn phím của Android.\n\n📱 Tìm \'Bàn Phím Rade\' trong danh sách\n✅ Bật nó lên\n↩️ Quay lại ứng dụng này</string>
+    <string name="enable_keyboard">Kích Hoạt Bàn Phím</string>
+
+    <string name="step2_title">Chọn Bàn Phím Rade</string>
+    <string name="step2_description">Bây giờ hãy đặt Bàn Phím Rade làm bàn phím hoạt động.\n\n📱 Chọn \'Bàn Phím Rade\' từ bộ chọn bàn phím\n⌨️ Hoặc nhấn giữ phím cách để chuyển đổi\n🔄 Bạn cũng có thể kéo xuống thông báo và nhấn biểu tượng bàn phím</string>
+    <string name="open_keyboard_picker">Mở Bộ Chọn Bàn Phím</string>
+
+    <string name="step3_title">Kiểm Tra Bàn Phím</string>
+    <string name="congratulations">🎉 Chúc mừng! Bạn đã sẵn sàng!</string>
+    <string name="test_hint">Kiểm tra bàn phím Rade tại đây: áêíôúýăâêôơư</string>
+    <string name="test_tips">✨ Thử gõ nguyên âm và nhấn giữ để có dấu thanh!\n📝 Nhấn đúp Shift để khóa chữ hoa\n🔙 Giữ phím xóa để xóa cả từ</string>
+
+    <string name="language_toggle">Ngôn Ngữ</string>
+
+    <string name="all_set">Hoàn Tất!</string>
+    <string name="ready_message">Bàn Phím Rade đã sẵn sàng để sử dụng.\nHãy thưởng thức việc gõ tiếng Rade!</string>
+    <string name="start_typing">Bắt Đầu Gõ!</string>
+
+    <!-- Status messages for steps -->
+    <string name="step1_status_pending">⏳ Nhấn \'Kích Hoạt Bàn Phím\' bên dưới</string>
+    <string name="step2_status_pending">⏳ Nhấn \'Chọn Bàn Phím\' bên dưới</string>
+    <string name="step3_status_ready">Sẵn sàng để thử!</string>
+
+    <string name="completed">Hoàn thành</string>
+    <string name="step1_first">Hoàn thành Bước 1 trước</string>
+    <string name="complete_previous_steps">Hoàn thành các bước trước</string>
+</resources>
