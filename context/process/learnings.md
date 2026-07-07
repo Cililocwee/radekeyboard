@@ -74,3 +74,16 @@ as you go.
 - **HermitDave FrequencyWords is CC-BY-SA** — attribution lives in the gzipped
   asset headers (`assets/dict/*.txt.gz`, `#` comment lines); keep it when
   regenerating dictionaries.
+- **The real "can't see anything in symbols view" bug was a shared-Paint leak.**
+  `drawKey` bumps `textPaint` 1.5x for the "."/"," keys and only restored it on
+  the QWERTY branch — in symbol mode the bump compounded every redraw
+  (1.5 → 2.25 → 3.4x…) until the view was unreadable. Restore shared Paint
+  mutations on every path; better, don't mutate shared paints per key.
+- **aapt gunzips and RENAMES `.gz` assets inside the APK** (`vi.txt.gz` becomes
+  `vi.txt`, decompressed), so `getAssets().open("…​.gz")` throws FileNotFound at
+  runtime while everything works on the JVM. Ship binary assets with a neutral
+  extension (`.dict`) and verify with `unzip -l` on the built APK.
+- **PopupWindow.showAtLocation takes window coordinates.** The keyboard view no
+  longer sits at the window origin (suggestion strip above it) — convert
+  view-local key positions with `getLocationInWindow` or popups drift by the
+  strip height.

@@ -19,6 +19,7 @@ final class KeyboardPrefs {
     static final String KEY_HAPTIC_DURATION_MS = "pref_haptic_duration_ms";
     static final String KEY_NUMBER_ROW = "pref_number_row";
     static final String KEY_KEYBOARD_LAYER = "keyboard_layer";
+    static final String KEY_THEME = "pref_theme";
 
     static final int DEFAULT_HAPTIC_DURATION_MS = 20;
 
@@ -54,6 +55,15 @@ final class KeyboardPrefs {
 
     static void setNumberRowEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_NUMBER_ROW, enabled).apply();
+    }
+
+    /** Theme choice ("light" | "dark" | "system"); light is the historical default. */
+    static String getTheme(Context context) {
+        return prefs(context).getString(KEY_THEME, KeyboardTheme.THEME_LIGHT);
+    }
+
+    static void setTheme(Context context, String theme) {
+        prefs(context).edit().putString(KEY_THEME, theme).apply();
     }
 
     /** Active language layer ("rd" | "vn" | "en"); see {@code KeyboardLayer}. */

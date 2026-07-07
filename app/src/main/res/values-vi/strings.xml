@@ -87,5 +87,9 @@
     <string name="settings_section_layout">Bố cục</string>
     <string name="settings_number_row_toggle">Hàng phím số</string>
     <string name="settings_number_row_hint">Khi tắt, giữ các phím chữ hàng trên để gõ số</string>
-    <string name="settings_apply_hint">Thay đổi sẽ áp dụng lần mở bàn phím tiếp theo</string>
+    <string name="settings_done">Xong</string>
+    <string name="settings_section_theme">Giao diện</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_theme_system">Tự động</string>
 </resources>

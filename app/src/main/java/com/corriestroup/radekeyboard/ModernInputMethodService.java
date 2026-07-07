@@ -1,6 +1,5 @@
 package com.corriestroup.radekeyboard;
 
-import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
 import android.text.InputType;
 import android.view.KeyEvent;
@@ -9,7 +8,6 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.LinearLayout;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +18,8 @@ public class ModernInputMethodService extends InputMethodService {
 
     private ModernKeyboardView keyboardView;
     private SuggestionStripView suggestionStrip;
+    private SettingsPanelView settingsPanel;
+    private LinearLayout inputContainer;
     private boolean isShiftPressed = false;
     private boolean isCapsLockOn = false;
     private KeyboardLayer currentLayer = KeyboardLayer.RADE;
@@ -33,17 +33,21 @@ public class ModernInputMethodService extends InputMethodService {
     @Override
     public void onCreate() {
         super.onCreate();
+        // .dict, not .gz: aapt silently gunzips and RENAMES *.gz assets inside the
+        // APK (vi.txt.gz -> vi.txt), so a .gz path 404s at runtime.
         new Thread(() -> {
-            viEngine = loadEngine("dict/vi.txt.gz");
-            enEngine = loadEngine("dict/en.txt.gz");
+            viEngine = loadEngine("dict/vi.dict");
+            enEngine = loadEngine("dict/en.dict");
         }, "dict-loader").start();
     }
 
     private SuggestionEngine loadEngine(String assetPath) {
         try (InputStream in = getAssets().open(assetPath)) {
             return new SuggestionEngine(WordDictionary.loadGzip(in));
-        } catch (IOException e) {
-            return null; // strip simply stays empty for this language
+        } catch (Exception e) {
+            // Never let the loader thread kill the IME process; the strip simply
+            // stays empty for this language.
+            return null;
         }
     }
 
@@ -73,21 +77,67 @@ public class ModernInputMethodService extends InputMethodService {
         suggestionStrip = new SuggestionStripView(this);
         suggestionStrip.setOnSuggestionTapListener(this::commitSuggestion);
 
+        settingsPanel = new SettingsPanelView(this);
+        settingsPanel.setVisibility(View.GONE);
+        settingsPanel.setListener(new SettingsPanelView.Listener() {
+            @Override
+            public void onDone() {
+                hideSettingsPanel();
+            }
+
+            @Override
+            public void onThemeChanged() {
+                keyboardView.refreshTheme();
+                suggestionStrip.refreshTheme();
+            }
+        });
+
         // The strip is a permanent sibling above the keyboard so the IME window
         // height never changes mid-session (the Samsung symbol-glitch invariant).
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.addView(suggestionStrip, new LinearLayout.LayoutParams(
+        // The settings panel swaps in at the same total size (see showSettingsPanel).
+        inputContainer = new LinearLayout(this);
+        inputContainer.setOrientation(LinearLayout.VERTICAL);
+        inputContainer.addView(suggestionStrip, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 suggestionStrip.getFixedHeightPx()));
-        container.addView(keyboardView, new LinearLayout.LayoutParams(
+        inputContainer.addView(keyboardView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
+        inputContainer.addView(settingsPanel, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0));
 
         // Check auto-capitalization when keyboard is created
         updateAutoCapitalization();
+        refreshSuggestions();
 
-        return container;
+        return inputContainer;
+    }
+
+    /** Swap the settings overlay in at exactly the keyboard's size — no window resize. */
+    private void showSettingsPanel() {
+        if (settingsPanel == null || inputContainer == null) return;
+        int currentHeight = inputContainer.getHeight();
+        if (currentHeight > 0) {
+            LinearLayout.LayoutParams lp =
+                    (LinearLayout.LayoutParams) settingsPanel.getLayoutParams();
+            lp.height = currentHeight;
+            settingsPanel.setLayoutParams(lp);
+        }
+        settingsPanel.refresh();
+        suggestionStrip.setVisibility(View.GONE);
+        keyboardView.setVisibility(View.GONE);
+        settingsPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSettingsPanel() {
+        if (settingsPanel == null) return;
+        settingsPanel.setVisibility(View.GONE);
+        suggestionStrip.setVisibility(View.VISIBLE);
+        keyboardView.setVisibility(View.VISIBLE);
+        // Apply whatever changed: haptics/number row (may re-measure) and theme.
+        keyboardView.refreshFromPrefs();
+        keyboardView.refreshTheme();
+        suggestionStrip.refreshTheme();
     }
 
     @Override
@@ -158,19 +208,26 @@ public class ModernInputMethodService extends InputMethodService {
         ic.commitText(word + " ", 1);
         ic.endBatchEdit();
         updateAutoCapitalization();
+        refreshSuggestions();
     }
 
     @Override
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
+        // Reopening always shows the keyboard, not a stale settings panel.
+        if (settingsPanel != null && settingsPanel.getVisibility() == View.VISIBLE) {
+            hideSettingsPanel();
+        }
         // Pick up settings changed while the keyboard was closed (number row,
         // haptics, layer), and refresh auto-caps for the newly focused field.
         if (keyboardView != null) {
             keyboardView.refreshFromPrefs();
+            keyboardView.refreshTheme();
             currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
             keyboardView.setLanguageLayer(currentLayer);
         }
         updateAutoCapitalization();
+        refreshSuggestions();
     }
 
     private void handleLanguageSwipe(int direction) {
@@ -202,6 +259,7 @@ public class ModernInputMethodService extends InputMethodService {
 
             // Check if we should auto-capitalize after this text
             updateAutoCapitalization();
+        refreshSuggestions();
             return; // Exit early since we handled everything
         }
 
@@ -256,6 +314,7 @@ public class ModernInputMethodService extends InputMethodService {
         }
         // Check if we should auto-capitalize after this text
         updateAutoCapitalization();
+        refreshSuggestions();
     }
 
     /**
@@ -284,6 +343,7 @@ public class ModernInputMethodService extends InputMethodService {
         ic.commitText(edit.commit, 1);
         ic.endBatchEdit();
         updateAutoCapitalization();
+        refreshSuggestions();
     }
 
     /** English layer / non-letter fallback: commit as-is with the usual shift handling. */
@@ -295,6 +355,7 @@ public class ModernInputMethodService extends InputMethodService {
         }
         ic.commitText(text, 1);
         updateAutoCapitalization();
+        refreshSuggestions();
     }
 
     private void consumeOneShotShift() {
@@ -386,10 +447,7 @@ public class ModernInputMethodService extends InputMethodService {
         // Settings must open even without an input connection, so it is handled
         // before the null guard below.
         if (specialKey == ModernKeyboardView.KEY_SETTINGS) {
-            Intent intent = new Intent(this, SettingsActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            requestHideSelf(0);
+            showSettingsPanel();
             return;
         }
 
@@ -452,6 +510,7 @@ public class ModernInputMethodService extends InputMethodService {
                 specialKey == ModernKeyboardView.KEY_DELETE ||
                 specialKey == ModernKeyboardView.KEY_DELETE_WORD) {
             updateAutoCapitalization();
+        refreshSuggestions();
         }
     }
 }

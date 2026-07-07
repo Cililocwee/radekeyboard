@@ -19,7 +19,8 @@ import java.util.zip.GZIPInputStream;
  * the service does it once on a background thread.
  *
  * <p>Asset format: gzipped UTF-8 lines of {@code word<space>count}; {@code #} lines
- * are comments (attribution headers).
+ * are comments (attribution headers). The assets use a {@code .dict} extension
+ * because aapt gunzips and renames {@code .gz} assets inside the APK.
  */
 final class WordDictionary {
 

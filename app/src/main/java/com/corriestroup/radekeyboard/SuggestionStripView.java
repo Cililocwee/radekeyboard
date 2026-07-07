@@ -1,8 +1,6 @@
 package com.corriestroup.radekeyboard;
 
 import android.content.Context;
-import android.content.res.Configuration;
-import android.graphics.Color;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -33,18 +31,9 @@ public class SuggestionStripView extends LinearLayout {
         super(context);
         setOrientation(HORIZONTAL);
 
-        int nightMode = getResources().getConfiguration().uiMode
-                & Configuration.UI_MODE_NIGHT_MASK;
-        boolean isDark = nightMode == Configuration.UI_MODE_NIGHT_YES;
-        // Match ModernKeyboardView's palette.
-        int surfaceColor = Color.parseColor(isDark ? "#1c1c1e" : "#e5e5e5");
-        int textColor = Color.parseColor(isDark ? "#e5e5e5" : "#4f4f4f");
-        setBackgroundColor(surfaceColor);
-
         for (int i = 0; i < SLOT_COUNT; i++) {
             TextView slot = new TextView(context);
             slot.setGravity(Gravity.CENTER);
-            slot.setTextColor(textColor);
             slot.setTextSize(16);
             slot.setMaxLines(1);
             LayoutParams lp = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f);
@@ -57,6 +46,16 @@ public class SuggestionStripView extends LinearLayout {
             });
             slots[i] = slot;
             addView(slot);
+        }
+        refreshTheme();
+    }
+
+    /** Re-resolve the shared palette — used when the theme setting changes live. */
+    public void refreshTheme() {
+        KeyboardTheme theme = KeyboardTheme.resolve(getContext());
+        setBackgroundColor(theme.surface);
+        for (TextView slot : slots) {
+            slot.setTextColor(theme.onSurface);
         }
     }
 

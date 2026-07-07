@@ -27,12 +27,6 @@
             android:name="com.corriestroup.radekeyboard.OnboardingActivity"
             android:theme="@style/AppTheme" />
 
-        <!-- Keyboard options, opened from the gear key on the symbols layout -->
-        <activity
-            android:exported="false"
-            android:name="com.corriestroup.radekeyboard.SettingsActivity"
-            android:theme="@style/AppTheme" />
-
         <service
             android:name="com.corriestroup.radekeyboard.ModernInputMethodService"
             android:exported="true"

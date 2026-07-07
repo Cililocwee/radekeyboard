@@ -189,39 +189,31 @@ public class ModernKeyboardView extends View {
         }
     }
 
-    /**
-     * Choose the keyboard palette based on the system's day/night mode. The teal
-     * accent works on both themes; only the surfaces and text invert.
-     */
+    /** Pull the shared palette (KeyboardTheme honors the user's theme setting). */
     private void applyThemeColors() {
-        int nightMode = getResources().getConfiguration().uiMode
-                & Configuration.UI_MODE_NIGHT_MASK;
-        boolean isDark = nightMode == Configuration.UI_MODE_NIGHT_YES;
-
-        primaryColor = Color.parseColor("#27b8cd"); // Accent (shared)
-        if (isDark) {
-            surfaceColor = Color.parseColor("#1c1c1e");        // Background
-            surfaceVariantColor = Color.parseColor("#2c2c2e"); // Keys
-            onSurfaceColor = Color.parseColor("#e5e5e5");      // Text
-            onPrimaryColor = Color.parseColor("#0d1416");      // Text on accent
-        } else {
-            surfaceColor = Color.parseColor("#e5e5e5");        // Background
-            surfaceVariantColor = Color.parseColor("#e7e7e7"); // Keys
-            onSurfaceColor = Color.parseColor("#4f4f4f");      // Text
-            onPrimaryColor = Color.parseColor("#e7e7e7");      // Text on accent
-        }
+        KeyboardTheme theme = KeyboardTheme.resolve(getContext());
+        primaryColor = theme.primary;
+        surfaceColor = theme.surface;
+        surfaceVariantColor = theme.surfaceVariant;
+        onSurfaceColor = theme.onSurface;
+        onPrimaryColor = theme.onPrimary;
     }
 
-    @Override
-    protected void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        // Re-theme and repaint if the user toggled day/night while the keyboard is up.
+    /** Re-resolve colors and repaint — used when the theme setting changes live. */
+    public void refreshTheme() {
         applyThemeColors();
         keyPaint.setColor(surfaceVariantColor);
         textPaint.setColor(onSurfaceColor);
         backgroundPaint.setColor(surfaceColor);
         setBackgroundColor(surfaceColor);
         invalidate();
+    }
+
+    @Override
+    protected void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Re-theme if day/night flipped while visible (matters in "system" mode).
+        refreshTheme();
     }
 
     private void setupPaints() {
@@ -456,6 +448,10 @@ public class ModernKeyboardView extends View {
                 // In symbol mode, center the text perfectly
                 float centerY = key.y + key.height / 2 + textPaint.getTextSize() / 2;
                 canvas.drawText(displayText, centerX, centerY, textPaint);
+                // textPaint is shared across keys AND draw passes: without this
+                // restore, the 1.5x bump for "."/"," compounds every redraw until
+                // the symbol view is unreadable (the "can't see anything" bug).
+                textPaint.setTextSize(originalTextSize);
             } else {
                 // In QWERTY mode, position main text lower to make room for alternatives
                 float mainTextY = key.y + key.height / 2 + textPaint.getTextSize() / 2 + 8;
@@ -527,6 +523,7 @@ public class ModernKeyboardView extends View {
      * swipe it previews the layer that releasing would switch to.
      */
     private void drawSpacebarLabel(Canvas canvas, Key key, int pressedTextColor) {
+        // The chevrons are always drawn — they advertise that the space bar slides.
         String label;
         int color;
         if (spaceSlideActive && slideDirection != 0) {
@@ -534,10 +531,10 @@ public class ModernKeyboardView extends View {
             label = "‹ " + target.spacebarLabel + " ›";
             color = primaryColor;
         } else if (key == pressedKey) {
-            label = layer.spacebarLabel;
+            label = "‹ " + layer.spacebarLabel + " ›";
             color = pressedTextColor;
         } else {
-            label = layer.spacebarLabel;
+            label = "‹ " + layer.spacebarLabel + " ›";
             color = Color.argb(140, Color.red(onSurfaceColor),
                     Color.green(onSurfaceColor), Color.blue(onSurfaceColor));
         }
@@ -1015,12 +1012,19 @@ public class ModernKeyboardView extends View {
         int popupWidth = popupLayout.getMeasuredWidth();
         int popupHeight = popupLayout.getMeasuredHeight();
 
-        int popupX = (int)(key.x + key.width / 2 - popupWidth / 2);
-        int popupY = (int)(key.y - popupHeight - 20);
+        // key.x/key.y are view-local; showAtLocation wants window coordinates, and
+        // this view no longer sits at the window origin (the suggestion strip is
+        // above it) — convert, or every popup lands one strip-height too high.
+        int[] windowOffset = new int[2];
+        getLocationInWindow(windowOffset);
+        int popupX = windowOffset[0] + (int)(key.x + key.width / 2 - popupWidth / 2);
+        int popupY = windowOffset[1] + (int)(key.y - popupHeight - 20);
 
         // Keep popup on screen
         if (popupX < 10) popupX = 10;
-        if (popupX + popupWidth > getWidth() - 10) popupX = getWidth() - popupWidth - 10;
+        if (popupX + popupWidth > windowOffset[0] + getWidth() - 10) {
+            popupX = windowOffset[0] + getWidth() - popupWidth - 10;
+        }
 
         longPressPopup.showAtLocation(this, android.view.Gravity.NO_GRAVITY, popupX, popupY);
     }

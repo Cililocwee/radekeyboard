@@ -94,3 +94,24 @@ RD's convention would risk regressions in the shipped Rade behavior.
 on the second vowel.
 **Why:** Matches contemporary keyboards (Gboard, Laban Key defaults) and school orthography;
 documented in a class comment so it isn't "fixed" later.
+
+## 2026-07-07 - Keyboard theme defaults to LIGHT; dark is opt-in
+
+**Context:** The v2 build followed system dark mode (palette logic from the
+better-ui merge) and the user's dark-mode phone rendered the keyboard black —
+"gross" compared to the light gray it always shipped with.
+**Decision:** `pref_theme` defaults to "light"; "dark" and "system" are choices in
+the keyboard settings panel. One shared palette (`KeyboardTheme`) drives the
+keyboard, suggestion strip, popups, and settings panel.
+**Why:** Never change the product's established look out from under users;
+following the OS is a preference, not a default.
+
+## 2026-07-07 - Keyboard settings are an in-keyboard overlay, not an Activity
+
+**Context:** The first settings implementation was a SettingsActivity; the user
+rejected it ("rendered as a separate app/screen instead of just an overlay").
+**Decision:** The gear key swaps a `SettingsPanelView` into the IME window at
+exactly the keyboard's current size; Done restores the keyboard and applies
+changes immediately. SettingsActivity was deleted.
+**Why:** Keyboard options belong in the keyboard; same-size swap also preserves
+the constant-window-height invariant.
