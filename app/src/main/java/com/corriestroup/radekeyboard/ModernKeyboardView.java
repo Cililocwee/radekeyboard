@@ -166,9 +166,6 @@ public class ModernKeyboardView extends View {
     private ValueAnimator pressAnimator;
     private float pressScale = 1.0f;
 
-    // Vibration
-    private boolean vibrationEnabled = false;
-
     // Dimensions
     private float keyHeight;
     private float keyMargin;
@@ -750,23 +747,6 @@ public class ModernKeyboardView extends View {
 
         // Create a proper popup with all alternatives
         showAlternativesPopup(key, alternatives);
-
-        // Add vibration feedback for long press
-        if (vibrationEnabled){
-            try {
-                android.os.Vibrator vibrator = (android.os.Vibrator) getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(50, 50));
-                    } else {
-                        vibrator.vibrate(25);
-                    }
-                }
-            } catch (Exception e) {
-                // Silent fail
-            }
-        }
-
     }
 
     private void showAlternativesPopup(Key key, String[] alternatives) {

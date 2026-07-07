@@ -23,13 +23,6 @@ public class KeyboardSetupChecker {
         InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
         List<InputMethodInfo> enabledInputMethods = imm.getEnabledInputMethodList();
 
-        android.util.Log.d("KeyboardChecker", "=== ENABLED KEYBOARDS ===");
-        for (InputMethodInfo info : enabledInputMethods) {
-            android.util.Log.d("KeyboardChecker", "Enabled: " + info.getId());
-        }
-        android.util.Log.d("KeyboardChecker", "Looking for: " + keyboardId);
-        android.util.Log.d("KeyboardChecker", "========================");
-
         for (InputMethodInfo info : enabledInputMethods) {
             if (info.getId().equals(keyboardId)) {
                 return true;
@@ -46,10 +39,6 @@ public class KeyboardSetupChecker {
                 context.getContentResolver(),
                 Settings.Secure.DEFAULT_INPUT_METHOD
         );
-
-        // Debug logging
-        android.util.Log.d("KeyboardChecker", "Current keyboard: " + currentKeyboard);
-        android.util.Log.d("KeyboardChecker", "Our keyboard ID: " + keyboardId);
 
         return keyboardId.equals(currentKeyboard);
     }

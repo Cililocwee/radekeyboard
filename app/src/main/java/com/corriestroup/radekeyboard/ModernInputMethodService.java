@@ -1,29 +1,15 @@
 package com.corriestroup.radekeyboard;
 
-import android.animation.ValueAnimator;
-import android.content.Context;
-import android.graphics.Color;
 import android.inputmethodservice.InputMethodService;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputConnection;
-import android.widget.Toast;
 
 public class ModernInputMethodService extends InputMethodService {
 
     private ModernKeyboardView keyboardView;
     private boolean isShiftPressed = false;
     private boolean isCapsLockOn = false;
-    private Vibrator vibrator;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-    }
-
 
     @Override
     public View onCreateInputView() {
@@ -49,15 +35,6 @@ public class ModernInputMethodService extends InputMethodService {
     private void handleKeyPress(String key, int keyCode) {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
-
-        // Haptic feedback (compatible with API 21+)
-        if (vibrator != null && vibrator.hasVibrator()) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
-            } else {
-                vibrator.vibrate(50); // Deprecated but works on older APIs
-            }
-        }
 
         // Handle punctuation that should replace a single trailing space
         if (key.equals(".") || key.equals("?") || key.equals("!")) {
@@ -211,15 +188,6 @@ public class ModernInputMethodService extends InputMethodService {
     private void handleSpecialKey(int specialKey) {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
-
-        // Haptic feedback (compatible with API 21+)
-        if (vibrator != null && vibrator.hasVibrator()) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(75, VibrationEffect.DEFAULT_AMPLITUDE));
-            } else {
-                vibrator.vibrate(75); // Deprecated but works on older APIs
-            }
-        }
 
         switch (specialKey) {
             case ModernKeyboardView.KEY_DELETE:

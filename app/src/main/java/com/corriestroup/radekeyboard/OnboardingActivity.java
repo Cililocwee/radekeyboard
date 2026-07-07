@@ -75,12 +75,6 @@ public class OnboardingActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        // Debug logging
-        android.util.Log.d("OnboardingActivity", "onResume called");
-        android.util.Log.d("OnboardingActivity", "Keyboard enabled: " + setupChecker.isKeyboardEnabled());
-        android.util.Log.d("OnboardingActivity", "Keyboard default: " + setupChecker.isKeyboardDefault());
-        android.util.Log.d("OnboardingActivity", "Fully setup: " + setupChecker.isKeyboardFullySetup());
-
         updateStepStatuses();
 
         // Auto-advance if steps are completed

@@ -2,9 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.corriestroup.radekeyboard">
 
-    <!-- Permissions for keyboard functionality -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-
     <application
         android:allowBackup="true"
         android:icon="@drawable/rade_icon"
