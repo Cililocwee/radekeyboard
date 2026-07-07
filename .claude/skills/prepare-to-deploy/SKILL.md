@@ -39,10 +39,18 @@ key that MUST be reused. Do NOT create a new keystore — a new key won't match 
 has registered and every upload will be rejected ("signed with the wrong key").
 
 **Known signing facts for this app** (recovered from the original project's IDE config;
-passwords are NOT recorded anywhere and only the user has them):
+the password is NOT recorded anywhere and only the user has it):
 - **Upload keystore:** `~/Desktop/Important Documents/radekeyboard-keystore`
+- **Format:** PKCS12 → the store password and key password are the **same single value**.
 - **Key alias:** `radekeyboard-key`
-- Almost certainly already enrolled in Play App Signing (the app is live).
+- **There IS a store password** (empty was verified incorrect). Almost certainly already
+  enrolled in Play App Signing (the app is live).
+
+⚠️ **PKCS12 listing trap:** `keytool -list` will show the `radekeyboard-key` alias even
+with a blank/wrong password — it just prints an "integrity has NOT been verified"
+WARNING and lists anyway. That does NOT mean the keystore is passwordless. *Signing*
+(the release build) requires the correct password even though *listing* did not. Do not
+assume "it listed fine" == "no password".
 
 First **detect state**: look for a `signingConfigs` block in `app/build.gradle` and a
 `keystore.properties` file at the repo root. Confirm `keystore.properties`, `*.jks`,

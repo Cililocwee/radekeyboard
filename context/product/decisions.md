@@ -26,9 +26,13 @@ Android Studio's wizard), so the key's location is easy to forget.
 this app.
 **Why:** Play registers the original upload key; a new key is rejected ("signed with the
 wrong key"). Recovering/rotating a lost key requires a Play App Signing upload-key reset.
-**Known facts** (passwords are NOT stored here — password manager only):
+**Known facts** (password is NOT stored here — password manager only):
 - Keystore: `~/Desktop/Important Documents/radekeyboard-keystore`
+- Format: PKCS12 → store password and key password are the same single value.
 - Key alias: `radekeyboard-key`
+- The keystore IS password-protected (an empty password was verified incorrect).
+- PKCS12 gotcha: `keytool -list` shows the alias even with a wrong password (prints an
+  "integrity NOT verified" warning) — listing is not proof the password is blank.
 - Recovered from the original clone's `.idea/workspace.xml` (`GenerateSignedApkSettings`).
 
 ## 2026-07-07 - Vibration/haptics removed

@@ -26,9 +26,13 @@ You do NOT repeat these for every release.
 > rejected).
 >
 > - **Keystore:** `~/Desktop/Important Documents/radekeyboard-keystore`
+> - **Format:** PKCS12 — the store password and key password are the **same one value**.
 > - **Key alias:** `radekeyboard-key`
-> - Passwords: in your password manager (not recorded here). Verify with
->   `keytool -list -v -keystore ~/Desktop/Important\ Documents/radekeyboard-keystore`.
+> - **Password:** exists (not blank), in your password manager — not recorded here.
+> - ⚠️ **PKCS12 listing trap:** `keytool -list` prints the alias even with a wrong/blank
+>   password (with an "integrity NOT verified" warning). Listing working does NOT mean
+>   there's no password — *signing* still needs the real one. To actually verify the
+>   password, sign something (or use `-storepass <pw>` and confirm no error).
 >
 > If it's ever moved, find it with `find "$HOME" -iname "radekeyboard-keystore*"`.
 
