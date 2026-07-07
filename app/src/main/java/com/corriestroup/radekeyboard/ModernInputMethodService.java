@@ -60,25 +60,25 @@ public class ModernInputMethodService extends InputMethodService {
 
         // Handle tone marks and combining characters
         String textToCommit = key;
-        if (isToneMark(key) || key.equals("˘")) {
+        if (VietnameseText.isCombiningInput(key)) {
             // Get the preceding character
             CharSequence beforeCursor = ic.getTextBeforeCursor(1, 0);
             if (beforeCursor != null && beforeCursor.length() > 0) {
                 char precedingChar = beforeCursor.charAt(0);
 
                 // Check if it's a vowel (for tone marks) or any character (for breve)
-                if (key.equals("˘") || isVowel(precedingChar)) {
+                if (VietnameseText.BREVE_KEY.equals(key) || VietnameseText.isVowel(precedingChar)) {
                     ic.deleteSurroundingText(1, 0);
-                    textToCommit = beforeCursor + getCombiningCharacter(key);
+                    textToCommit = beforeCursor + VietnameseText.getCombiningCharacter(key);
                 } else {
                     // If not a vowel and it's a tone mark, don't apply it
-                    if (isToneMark(key)) {
+                    if (VietnameseText.isToneMark(key)) {
                         return; // Don't commit anything
                     }
-                    textToCommit = getCombiningCharacter(key);
+                    textToCommit = VietnameseText.getCombiningCharacter(key);
                 }
             } else {
-                textToCommit = getCombiningCharacter(key);
+                textToCommit = VietnameseText.getCombiningCharacter(key);
             }
         }
 
@@ -159,30 +159,6 @@ public class ModernInputMethodService extends InputMethodService {
                 isCapsLockOn = false;   // Make sure caps lock is off
                 keyboardView.updateShiftState(isShiftPressed, isCapsLockOn);
             }
-        }
-    }
-    private boolean isToneMark(String key) {
-        return key.equals("̀") || key.equals("́") || key.equals("̂") ||
-                key.equals("̃") || key.equals("̉") || key.equals("̣");
-    }
-
-    private boolean isVowel(char c) {
-        char lower = Character.toLowerCase(c);
-        return lower == 'a' || lower == 'e' || lower == 'i' ||
-                lower == 'o' || lower == 'u' || lower == 'y' ||
-                lower == 'ă' || lower == 'â' || lower == 'ê' ||
-                lower == 'ô' || lower == 'ơ' || lower == 'ư';
-    }
-
-    private String getCombiningCharacter(String key) {
-        switch (key) {
-            case "˘": return "\u0306"; // Combining breve
-            case "̀": return "\u0300"; // Combining grave accent (down tone)
-            case "́": return "\u0301"; // Combining acute accent (up tone)
-            case "̃": return "\u0303"; // Combining tilde (nga tone)
-            case "̉": return "\u0309"; // Combining hook above (hoi tone)
-            case "̣": return "\u0323"; // Combining dot below (nang tone)
-            default: return key;
         }
     }
     private void handleSpecialKey(int specialKey) {
