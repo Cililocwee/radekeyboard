@@ -2,17 +2,50 @@ package com.corriestroup.radekeyboard;
 
 import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
+import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.LinearLayout;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 
 public class ModernInputMethodService extends InputMethodService {
 
+    private static final int MAX_SUGGESTIONS = 3;
+
     private ModernKeyboardView keyboardView;
+    private SuggestionStripView suggestionStrip;
     private boolean isShiftPressed = false;
     private boolean isCapsLockOn = false;
     private KeyboardLayer currentLayer = KeyboardLayer.RADE;
+
+    // Loaded once on a background thread; the strip stays empty until ready.
+    private volatile SuggestionEngine viEngine;
+    private volatile SuggestionEngine enEngine;
+    // Set per-field from EditorInfo: no suggestions in password/no-suggestion fields.
+    private boolean suggestionsDisabled = false;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        new Thread(() -> {
+            viEngine = loadEngine("dict/vi.txt.gz");
+            enEngine = loadEngine("dict/en.txt.gz");
+        }, "dict-loader").start();
+    }
+
+    private SuggestionEngine loadEngine(String assetPath) {
+        try (InputStream in = getAssets().open(assetPath)) {
+            return new SuggestionEngine(WordDictionary.loadGzip(in));
+        } catch (IOException e) {
+            return null; // strip simply stays empty for this language
+        }
+    }
 
     @Override
     public View onCreateInputView() {
@@ -37,10 +70,92 @@ public class ModernInputMethodService extends InputMethodService {
         currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
         keyboardView.setLanguageLayer(currentLayer);
 
+        suggestionStrip = new SuggestionStripView(this);
+        suggestionStrip.setOnSuggestionTapListener(this::commitSuggestion);
+
+        // The strip is a permanent sibling above the keyboard so the IME window
+        // height never changes mid-session (the Samsung symbol-glitch invariant).
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(suggestionStrip);
+        container.addView(keyboardView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
         // Check auto-capitalization when keyboard is created
         updateAutoCapitalization();
 
-        return keyboardView;
+        return container;
+    }
+
+    @Override
+    public void onStartInput(EditorInfo attribute, boolean restarting) {
+        super.onStartInput(attribute, restarting);
+        suggestionsDisabled = shouldDisableSuggestions(attribute);
+        refreshSuggestions();
+    }
+
+    /** Never suggest (or, later, learn) in password / no-suggestion / non-text fields. */
+    private static boolean shouldDisableSuggestions(EditorInfo attribute) {
+        if (attribute == null) return true;
+        int inputType = attribute.inputType;
+        int cls = inputType & InputType.TYPE_MASK_CLASS;
+        if (cls != InputType.TYPE_CLASS_TEXT) return true;
+        int variation = inputType & InputType.TYPE_MASK_VARIATION;
+        if (variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
+                || variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                || variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
+            return true;
+        }
+        return (inputType & InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0;
+    }
+
+    @Override
+    public void onUpdateSelection(int oldSelStart, int oldSelEnd,
+                                  int newSelStart, int newSelEnd,
+                                  int candidatesStart, int candidatesEnd) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                candidatesStart, candidatesEnd);
+        // Fires after every commit and cursor move — the one hook that keeps the
+        // strip in sync no matter how the text changed.
+        refreshSuggestions();
+    }
+
+    private SuggestionEngine engineForCurrentLayer() {
+        // Rade shares the Vietnamese dictionary until a Rade wordlist ships
+        // (the engine is data-driven: a language = a wordlist asset).
+        return currentLayer == KeyboardLayer.ENGLISH ? enEngine : viEngine;
+    }
+
+    private void refreshSuggestions() {
+        if (suggestionStrip == null) return;
+        if (suggestionsDisabled) {
+            suggestionStrip.setSuggestions(Collections.emptyList());
+            return;
+        }
+        SuggestionEngine engine = engineForCurrentLayer();
+        InputConnection ic = getCurrentInputConnection();
+        if (engine == null || ic == null) {
+            suggestionStrip.setSuggestions(Collections.emptyList());
+            return;
+        }
+        String word = extractTrailingWord(ic.getTextBeforeCursor(48, 0));
+        List<String> suggestions = engine.suggest(word, MAX_SUGGESTIONS);
+        suggestionStrip.setSuggestions(suggestions);
+    }
+
+    /** Replace the word being typed with the tapped suggestion plus a space. */
+    private void commitSuggestion(String word) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+        String current = extractTrailingWord(ic.getTextBeforeCursor(48, 0));
+        ic.beginBatchEdit();
+        if (!current.isEmpty()) {
+            ic.deleteSurroundingText(current.length(), 0);
+        }
+        ic.commitText(word + " ", 1);
+        ic.endBatchEdit();
+        updateAutoCapitalization();
     }
 
     @Override
