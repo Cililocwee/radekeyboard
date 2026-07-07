@@ -171,12 +171,12 @@ public class ModernKeyboardView extends View {
     private float keyMargin;
     private int keyboardHeight;
 
-    // Colors (Material Design 3)
-    private int surfaceColor = Color.parseColor("#e5e5e5");         // Background
-    private int onSurfaceColor = Color.parseColor("#4f4f4f");       // Text
-    private int primaryColor = Color.parseColor("#27b8cd");         // Accent
-    private int onPrimaryColor = Color.parseColor("#e7e7e7");       // Text on Accent
-    private int surfaceVariantColor = Color.parseColor("#e7e7e7");  //  Keys
+    // Colors (Material Design 3) — populated by applyThemeColors() based on night mode.
+    private int surfaceColor;         // Background
+    private int onSurfaceColor;       // Text
+    private int primaryColor;         // Accent
+    private int onPrimaryColor;       // Text on Accent
+    private int surfaceVariantColor;  // Keys
 
     // Add these fields with your other private fields
     private Handler deleteHandler = new Handler();
@@ -203,10 +203,46 @@ public class ModernKeyboardView extends View {
     }
 
     private void init() {
+        applyThemeColors();
         setupPaints();
         calculateDimensions();
         createKeys();
         setBackgroundColor(surfaceColor);
+    }
+
+    /**
+     * Choose the keyboard palette based on the system's day/night mode. The teal
+     * accent works on both themes; only the surfaces and text invert.
+     */
+    private void applyThemeColors() {
+        int nightMode = getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK;
+        boolean isDark = nightMode == Configuration.UI_MODE_NIGHT_YES;
+
+        primaryColor = Color.parseColor("#27b8cd"); // Accent (shared)
+        if (isDark) {
+            surfaceColor = Color.parseColor("#1c1c1e");        // Background
+            surfaceVariantColor = Color.parseColor("#2c2c2e"); // Keys
+            onSurfaceColor = Color.parseColor("#e5e5e5");      // Text
+            onPrimaryColor = Color.parseColor("#0d1416");      // Text on accent
+        } else {
+            surfaceColor = Color.parseColor("#e5e5e5");        // Background
+            surfaceVariantColor = Color.parseColor("#e7e7e7"); // Keys
+            onSurfaceColor = Color.parseColor("#4f4f4f");      // Text
+            onPrimaryColor = Color.parseColor("#e7e7e7");      // Text on accent
+        }
+    }
+
+    @Override
+    protected void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Re-theme and repaint if the user toggled day/night while the keyboard is up.
+        applyThemeColors();
+        keyPaint.setColor(surfaceVariantColor);
+        textPaint.setColor(onSurfaceColor);
+        backgroundPaint.setColor(surfaceColor);
+        setBackgroundColor(surfaceColor);
+        invalidate();
     }
 
     private void setupPaints() {
