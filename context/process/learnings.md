@@ -48,3 +48,50 @@ as you go.
   or `ANDROID_HOME` locally, or Gradle fails with "SDK location not found".
 - **Release build artifacts must not be committed.** `app/release/*.aab|*.apk` and
   `build/` are gitignored; earlier history had a `.aab`/`.apk` checked in by mistake.
+
+## v2 Round (2026-07-07)
+
+- **The Samsung symbol-view glitch was a mid-session IME window resize.** The old
+  code derived keyboard height from the current layout's row count (5 QWERTY vs 4
+  symbols), so toggling layouts resized the IME window while open — a path One UI
+  mishandles. Keyboard height must stay constant across layout toggles (symbol rows
+  stretch); only settings applied on keyboard reopen may change it.
+- **The old press ValueAnimator drew nothing.** Both branches of the pressed-rect
+  math rendered the full key rect; the animator just burned an invalidate per frame
+  and shared one scale across keys. Instant color highlight replaced it.
+- **`Comparator.comparing` / `List.sort` need API 24** — minSdk is 21. Lint's NewApi
+  check catches this only if you run `make lint`; run it before handing off.
+- **Multi-touch commits on ACTION_POINTER_DOWN.** Real keyboards commit the first
+  key the moment a second finger lands. Track one active pointer id; never
+  retro-press a finger that was merely resting when the active one lifts.
+- **Telex output is NFC; Rade output is decomposed.** `TelexComposer` (VN layer)
+  emits precomposed NFC and NFD-normalizes its input, so mid-word layer switches
+  survive. Don't "unify" the two conventions — other apps expect NFC Vietnamese,
+  and the shipped Rade behavior expects base+combining commits.
+- **`onUpdateSelection` is the one hook that keeps a suggestion strip in sync** —
+  it fires after every commit, delete, and cursor tap; no need to sprinkle refresh
+  calls through the key handlers.
+- **HermitDave FrequencyWords is CC-BY-SA** — attribution lives in the gzipped
+  asset headers (`assets/dict/*.txt.gz`, `#` comment lines); keep it when
+  regenerating dictionaries.
+- **The real "can't see anything in symbols view" bug was a shared-Paint leak.**
+  `drawKey` bumps `textPaint` 1.5x for the "."/"," keys and only restored it on
+  the QWERTY branch — in symbol mode the bump compounded every redraw
+  (1.5 → 2.25 → 3.4x…) until the view was unreadable. Restore shared Paint
+  mutations on every path; better, don't mutate shared paints per key.
+- **aapt gunzips and RENAMES `.gz` assets inside the APK** (`vi.txt.gz` becomes
+  `vi.txt`, decompressed), so `getAssets().open("…​.gz")` throws FileNotFound at
+  runtime while everything works on the JVM. Ship binary assets with a neutral
+  extension (`.dict`) and verify with `unzip -l` on the built APK.
+- **PopupWindow.showAtLocation takes window coordinates.** The keyboard view no
+  longer sits at the window origin (suggestion strip above it) — convert
+  view-local key positions with `getLocationInWindow` or popups drift by the
+  strip height.
+- **AppCompat widgets crash when inflated with the raw IME service context** —
+  `SwitchCompat` inflates fine but dies on first layout/draw because the service
+  theme lacks AppCompat attributes. Wrap the context:
+  `new ContextThemeWrapper(context, R.style.AppTheme)` before inflating any
+  keyboard-hosted panel that uses androidx widgets.
+- **targetSdk 35 = enforced edge-to-edge for activities too.** Onboarding/testing
+  screens rendered under the status bar and gesture bar; roots need
+  `android:fitsSystemWindows="true"` (or inset listeners).

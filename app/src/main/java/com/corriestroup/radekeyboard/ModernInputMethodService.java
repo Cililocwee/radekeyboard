@@ -1,15 +1,55 @@
 package com.corriestroup.radekeyboard;
 
 import android.inputmethodservice.InputMethodService;
+import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.LinearLayout;
+
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 
 public class ModernInputMethodService extends InputMethodService {
 
+    private static final int MAX_SUGGESTIONS = 3;
+
     private ModernKeyboardView keyboardView;
+    private SuggestionStripView suggestionStrip;
+    private SettingsPanelView settingsPanel;
+    private LinearLayout inputContainer;
     private boolean isShiftPressed = false;
     private boolean isCapsLockOn = false;
+    private KeyboardLayer currentLayer = KeyboardLayer.RADE;
+
+    // Loaded once on a background thread; the strip stays empty until ready.
+    private volatile SuggestionEngine viEngine;
+    private volatile SuggestionEngine enEngine;
+    // Set per-field from EditorInfo: no suggestions in password/no-suggestion fields.
+    private boolean suggestionsDisabled = false;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        // .dict, not .gz: aapt silently gunzips and RENAMES *.gz assets inside the
+        // APK (vi.txt.gz -> vi.txt), so a .gz path 404s at runtime.
+        new Thread(() -> {
+            viEngine = loadEngine("dict/vi.dict");
+            enEngine = loadEngine("dict/en.dict");
+        }, "dict-loader").start();
+    }
+
+    private SuggestionEngine loadEngine(String assetPath) {
+        try (InputStream in = getAssets().open(assetPath)) {
+            return new SuggestionEngine(WordDictionary.loadGzip(in));
+        } catch (Exception e) {
+            // Never let the loader thread kill the IME process; the strip simply
+            // stays empty for this language.
+            return null;
+        }
+    }
 
     @Override
     public View onCreateInputView() {
@@ -24,12 +64,176 @@ public class ModernInputMethodService extends InputMethodService {
             public void onSpecialKeyPressed(int specialKey) {
                 handleSpecialKey(specialKey);
             }
+
+            @Override
+            public void onLanguageSwipe(int direction) {
+                handleLanguageSwipe(direction);
+            }
         });
+
+        currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
+        keyboardView.setLanguageLayer(currentLayer);
+
+        suggestionStrip = new SuggestionStripView(this);
+        suggestionStrip.setOnSuggestionTapListener(this::commitSuggestion);
+
+        settingsPanel = new SettingsPanelView(this);
+        settingsPanel.setVisibility(View.GONE);
+        settingsPanel.setListener(new SettingsPanelView.Listener() {
+            @Override
+            public void onDone() {
+                hideSettingsPanel();
+            }
+
+            @Override
+            public void onThemeChanged() {
+                keyboardView.refreshTheme();
+                suggestionStrip.refreshTheme();
+            }
+        });
+
+        // The strip is a permanent sibling above the keyboard so the IME window
+        // height never changes mid-session (the Samsung symbol-glitch invariant).
+        // The settings panel swaps in at the same total size (see showSettingsPanel).
+        inputContainer = new LinearLayout(this);
+        inputContainer.setOrientation(LinearLayout.VERTICAL);
+        inputContainer.addView(suggestionStrip, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                suggestionStrip.getFixedHeightPx()));
+        inputContainer.addView(keyboardView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        inputContainer.addView(settingsPanel, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0));
 
         // Check auto-capitalization when keyboard is created
         updateAutoCapitalization();
+        refreshSuggestions();
 
-        return keyboardView;
+        return inputContainer;
+    }
+
+    /** Swap the settings overlay in at exactly the keyboard's size — no window resize. */
+    private void showSettingsPanel() {
+        if (settingsPanel == null || inputContainer == null) return;
+        int currentHeight = inputContainer.getHeight();
+        if (currentHeight > 0) {
+            LinearLayout.LayoutParams lp =
+                    (LinearLayout.LayoutParams) settingsPanel.getLayoutParams();
+            lp.height = currentHeight;
+            settingsPanel.setLayoutParams(lp);
+        }
+        settingsPanel.refresh();
+        suggestionStrip.setVisibility(View.GONE);
+        keyboardView.setVisibility(View.GONE);
+        settingsPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSettingsPanel() {
+        if (settingsPanel == null) return;
+        settingsPanel.setVisibility(View.GONE);
+        suggestionStrip.setVisibility(View.VISIBLE);
+        keyboardView.setVisibility(View.VISIBLE);
+        // Apply whatever changed: haptics/number row (may re-measure) and theme.
+        keyboardView.refreshFromPrefs();
+        keyboardView.refreshTheme();
+        suggestionStrip.refreshTheme();
+    }
+
+    @Override
+    public void onStartInput(EditorInfo attribute, boolean restarting) {
+        super.onStartInput(attribute, restarting);
+        suggestionsDisabled = shouldDisableSuggestions(attribute);
+        refreshSuggestions();
+    }
+
+    /** Never suggest (or, later, learn) in password / no-suggestion / non-text fields. */
+    private static boolean shouldDisableSuggestions(EditorInfo attribute) {
+        if (attribute == null) return true;
+        int inputType = attribute.inputType;
+        int cls = inputType & InputType.TYPE_MASK_CLASS;
+        if (cls != InputType.TYPE_CLASS_TEXT) return true;
+        int variation = inputType & InputType.TYPE_MASK_VARIATION;
+        if (variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
+                || variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                || variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
+            return true;
+        }
+        return (inputType & InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0;
+    }
+
+    @Override
+    public void onUpdateSelection(int oldSelStart, int oldSelEnd,
+                                  int newSelStart, int newSelEnd,
+                                  int candidatesStart, int candidatesEnd) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                candidatesStart, candidatesEnd);
+        // Fires after every commit and cursor move — the one hook that keeps the
+        // strip in sync no matter how the text changed.
+        refreshSuggestions();
+    }
+
+    private SuggestionEngine engineForCurrentLayer() {
+        // Rade shares the Vietnamese dictionary until a Rade wordlist ships
+        // (the engine is data-driven: a language = a wordlist asset).
+        return currentLayer == KeyboardLayer.ENGLISH ? enEngine : viEngine;
+    }
+
+    private void refreshSuggestions() {
+        if (suggestionStrip == null) return;
+        if (suggestionsDisabled) {
+            suggestionStrip.setSuggestions(Collections.emptyList());
+            return;
+        }
+        SuggestionEngine engine = engineForCurrentLayer();
+        InputConnection ic = getCurrentInputConnection();
+        if (engine == null || ic == null) {
+            suggestionStrip.setSuggestions(Collections.emptyList());
+            return;
+        }
+        String word = extractTrailingWord(ic.getTextBeforeCursor(48, 0));
+        List<String> suggestions = engine.suggest(word, MAX_SUGGESTIONS);
+        suggestionStrip.setSuggestions(suggestions);
+    }
+
+    /** Replace the word being typed with the tapped suggestion plus a space. */
+    private void commitSuggestion(String word) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+        String current = extractTrailingWord(ic.getTextBeforeCursor(48, 0));
+        ic.beginBatchEdit();
+        if (!current.isEmpty()) {
+            ic.deleteSurroundingText(current.length(), 0);
+        }
+        ic.commitText(word + " ", 1);
+        ic.endBatchEdit();
+        updateAutoCapitalization();
+        refreshSuggestions();
+    }
+
+    @Override
+    public void onStartInputView(EditorInfo info, boolean restarting) {
+        super.onStartInputView(info, restarting);
+        // Reopening always shows the keyboard, not a stale settings panel.
+        if (settingsPanel != null && settingsPanel.getVisibility() == View.VISIBLE) {
+            hideSettingsPanel();
+        }
+        // Pick up settings changed while the keyboard was closed (number row,
+        // haptics, layer), and refresh auto-caps for the newly focused field.
+        if (keyboardView != null) {
+            keyboardView.refreshFromPrefs();
+            keyboardView.refreshTheme();
+            currentLayer = KeyboardLayer.fromPrefValue(KeyboardPrefs.getKeyboardLayer(this));
+            keyboardView.setLanguageLayer(currentLayer);
+        }
+        updateAutoCapitalization();
+        refreshSuggestions();
+    }
+
+    private void handleLanguageSwipe(int direction) {
+        currentLayer = direction > 0 ? currentLayer.next() : currentLayer.previous();
+        KeyboardPrefs.setKeyboardLayer(this, currentLayer.prefValue);
+        keyboardView.setLanguageLayer(currentLayer);
     }
 
     private void handleKeyPress(String key, int keyCode) {
@@ -55,7 +259,18 @@ public class ModernInputMethodService extends InputMethodService {
 
             // Check if we should auto-capitalize after this text
             updateAutoCapitalization();
+        refreshSuggestions();
             return; // Exit early since we handled everything
+        }
+
+        // Layer-specific text paths; Rade falls through to the combining-mark logic below.
+        if (currentLayer == KeyboardLayer.VIETNAMESE) {
+            handleVietnameseKey(ic, key);
+            return;
+        }
+        if (currentLayer == KeyboardLayer.ENGLISH) {
+            commitPlainKey(ic, key);
+            return;
         }
 
         // Handle tone marks and combining characters
@@ -99,6 +314,73 @@ public class ModernInputMethodService extends InputMethodService {
         }
         // Check if we should auto-capitalize after this text
         updateAutoCapitalization();
+        refreshSuggestions();
+    }
+
+    /**
+     * Vietnamese layer: single letters run through the Telex composer against the
+     * word before the cursor. Shift is resolved BEFORE composing (the post-hoc
+     * uppercase in the Rade path would corrupt multi-character recommits), and the
+     * edit is applied as one batch. Output is precomposed NFC.
+     */
+    private void handleVietnameseKey(InputConnection ic, String key) {
+        if (key.length() != 1 || !Character.isLetter(key.charAt(0))) {
+            commitPlainKey(ic, key);
+            return;
+        }
+        char typed = key.charAt(0);
+        if (isShiftPressed || isCapsLockOn) {
+            typed = Character.toUpperCase(typed);
+            consumeOneShotShift();
+        }
+
+        CharSequence before = ic.getTextBeforeCursor(32, 0);
+        TelexComposer.Edit edit = TelexComposer.process(extractTrailingWord(before), typed);
+        ic.beginBatchEdit();
+        if (edit.deleteCount > 0) {
+            ic.deleteSurroundingText(edit.deleteCount, 0);
+        }
+        ic.commitText(edit.commit, 1);
+        ic.endBatchEdit();
+        updateAutoCapitalization();
+        refreshSuggestions();
+    }
+
+    /** English layer / non-letter fallback: commit as-is with the usual shift handling. */
+    private void commitPlainKey(InputConnection ic, String key) {
+        String text = key;
+        if (isShiftPressed || isCapsLockOn) {
+            text = text.toUpperCase();
+            consumeOneShotShift();
+        }
+        ic.commitText(text, 1);
+        updateAutoCapitalization();
+        refreshSuggestions();
+    }
+
+    private void consumeOneShotShift() {
+        if (isShiftPressed) {
+            isShiftPressed = false;
+            keyboardView.updateShiftState(false, isCapsLockOn);
+        }
+    }
+
+    /**
+     * The letter run (including combining marks, which the Rade layer commits)
+     * immediately before the cursor — the composer's input word.
+     */
+    private static String extractTrailingWord(CharSequence before) {
+        if (before == null || before.length() == 0) return "";
+        int start = before.length();
+        while (start > 0) {
+            char c = before.charAt(start - 1);
+            if (Character.isLetter(c) || Character.getType(c) == Character.NON_SPACING_MARK) {
+                start--;
+            } else {
+                break;
+            }
+        }
+        return before.subSequence(start, before.length()).toString();
     }
 
     private void deleteLastWord() {
@@ -162,6 +444,13 @@ public class ModernInputMethodService extends InputMethodService {
         }
     }
     private void handleSpecialKey(int specialKey) {
+        // Settings must open even without an input connection, so it is handled
+        // before the null guard below.
+        if (specialKey == ModernKeyboardView.KEY_SETTINGS) {
+            showSettingsPanel();
+            return;
+        }
+
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
 
@@ -221,6 +510,7 @@ public class ModernInputMethodService extends InputMethodService {
                 specialKey == ModernKeyboardView.KEY_DELETE ||
                 specialKey == ModernKeyboardView.KEY_DELETE_WORD) {
             updateAutoCapitalization();
+        refreshSuggestions();
         }
     }
 }
